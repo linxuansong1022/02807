@@ -1,0 +1,276 @@
+{
+  "review_date": "2026-11-11",
+  "scope": "Read-only audit of existing local data preparation outputs; no production data regenerated.",
+  "source_md5": {
+    "all_five_local_checks_match": true,
+    "all_five_match_official_zenodo_page": true,
+    "official_url": "https://zenodo.org/records/15394646",
+    "files": [
+      {
+        "file": "userid_trackid_timestamp.tsv.bz2",
+        "bytes": 2211449511,
+        "md5": "dfe82201036765f7463e6f3ce3d0f991",
+        "verified": true
+      },
+      {
+        "file": "id_tags_dict.tsv.bz2",
+        "bytes": 14817003,
+        "md5": "9c1ca4a3e04a9696b9449ec54ac40cd5",
+        "verified": true
+      },
+      {
+        "file": "id_tags_tf-idf.tsv.bz2",
+        "bytes": 44983347,
+        "md5": "6681d5c2bf214ad54465286fbbab1ed4",
+        "verified": true
+      },
+      {
+        "file": "id_genres_tf-idf.tsv.bz2",
+        "bytes": 2963194,
+        "md5": "a742b5fa1d2e2ce780101773e57bb7f5",
+        "verified": true
+      },
+      {
+        "file": "README.md",
+        "bytes": 20493,
+        "md5": "df379ed27dcefe5652b8db4e6783e304",
+        "verified": true
+      }
+    ]
+  },
+  "events": {
+    "analysis_rows": 252984395,
+    "users": 119140,
+    "tracks": 56512,
+    "min_timestamp": "2005-02-14 01:07:46",
+    "max_timestamp": "2020-03-20 12:59:51",
+    "null_or_blank_required_field_rows": 0
+  },
+  "source_rows": 252984396,
+  "pre2005_source_events": [
+    [
+      "20744",
+      "hfyWWbpjDcX7vCbx",
+      "1970-01-01 01:00:36"
+    ]
+  ],
+  "track_table": {
+    "rows": 109269,
+    "unique_ids": 109269,
+    "content_only_rows": 52757,
+    "has_tags_rows": 88092,
+    "has_genres_rows": 109242
+  },
+  "event_track_coverage": {
+    "event_tracks": 56512,
+    "with_positive_tags": 45589,
+    "with_nonzero_genres": 56498,
+    "with_both": 45577
+  },
+  "exact_checks": {
+    "track_stats_symmetric_differences": 0,
+    "user_stats_symmetric_differences": 0,
+    "tracks_first_seen_errors": 0,
+    "track_list_invariant_errors": 0,
+    "dev_outside_standard": 0
+  },
+  "samples": {
+    "dev": {
+      "stable_user_ids_and_order_correct": true,
+      "expected_event_signature": {
+        "rows": 4343429,
+        "sum_row_hash": 40072183872701686464081248,
+        "xor_row_hash": 3519830231804059896
+      },
+      "actual_event_signature": {
+        "rows": 4343429,
+        "sum_row_hash": 40072183872701686464081248,
+        "xor_row_hash": 3519830231804059896
+      },
+      "event_signatures_match": true,
+      "exact_track_table_symmetric_differences": 0
+    },
+    "standard": {
+      "stable_user_ids_and_order_correct": true,
+      "expected_event_signature": {
+        "rows": 42978876,
+        "sum_row_hash": 396390963323396096305776277,
+        "xor_row_hash": 487193690206066567
+      },
+      "actual_event_signature": {
+        "rows": 42978876,
+        "sum_row_hash": 396390963323396096305776277,
+        "xor_row_hash": 487193690206066567
+      },
+      "event_signatures_match": true,
+      "exact_track_table_symmetric_differences": 0
+    }
+  },
+  "split_feasibility": {
+    "all_nine_rows_match": true,
+    "recomputed_rows": [
+      {
+        "T": "2011-01-01",
+        "song_window_end_exclusive": "2011-06-30",
+        "observation_days": "30",
+        "sample": "full",
+        "eligible_users": "27344",
+        "tagged_new_tracks": "1068",
+        "songs_ge1_listener": "1019",
+        "songs_ge10_listeners": "607",
+        "songs_ge20_listeners": "459"
+      },
+      {
+        "T": "2011-01-01",
+        "song_window_end_exclusive": "2011-06-30",
+        "observation_days": "30",
+        "sample": "dev",
+        "eligible_users": "475",
+        "tagged_new_tracks": "1068",
+        "songs_ge1_listener": "309",
+        "songs_ge10_listeners": "0",
+        "songs_ge20_listeners": "0"
+      },
+      {
+        "T": "2011-01-01",
+        "song_window_end_exclusive": "2011-06-30",
+        "observation_days": "30",
+        "sample": "standard",
+        "eligible_users": "4653",
+        "tagged_new_tracks": "1068",
+        "songs_ge1_listener": "737",
+        "songs_ge10_listeners": "215",
+        "songs_ge20_listeners": "90"
+      },
+      {
+        "T": "2014-01-01",
+        "song_window_end_exclusive": "2014-06-30",
+        "observation_days": "30",
+        "sample": "full",
+        "eligible_users": "104351",
+        "tagged_new_tracks": "1029",
+        "songs_ge1_listener": "1026",
+        "songs_ge10_listeners": "749",
+        "songs_ge20_listeners": "639"
+      },
+      {
+        "T": "2014-01-01",
+        "song_window_end_exclusive": "2014-06-30",
+        "observation_days": "30",
+        "sample": "dev",
+        "eligible_users": "1764",
+        "tagged_new_tracks": "1029",
+        "songs_ge1_listener": "528",
+        "songs_ge10_listeners": "47",
+        "songs_ge20_listeners": "4"
+      },
+      {
+        "T": "2014-01-01",
+        "song_window_end_exclusive": "2014-06-30",
+        "observation_days": "30",
+        "sample": "standard",
+        "eligible_users": "17554",
+        "tagged_new_tracks": "1029",
+        "songs_ge1_listener": "840",
+        "songs_ge10_listeners": "425",
+        "songs_ge20_listeners": "282"
+      },
+      {
+        "T": "2017-01-01",
+        "song_window_end_exclusive": "2017-06-30",
+        "observation_days": "30",
+        "sample": "full",
+        "eligible_users": "105530",
+        "tagged_new_tracks": "1204",
+        "songs_ge1_listener": "1203",
+        "songs_ge10_listeners": "947",
+        "songs_ge20_listeners": "814"
+      },
+      {
+        "T": "2017-01-01",
+        "song_window_end_exclusive": "2017-06-30",
+        "observation_days": "30",
+        "sample": "dev",
+        "eligible_users": "1785",
+        "tagged_new_tracks": "1204",
+        "songs_ge1_listener": "677",
+        "songs_ge10_listeners": "48",
+        "songs_ge20_listeners": "7"
+      },
+      {
+        "T": "2017-01-01",
+        "song_window_end_exclusive": "2017-06-30",
+        "observation_days": "30",
+        "sample": "standard",
+        "eligible_users": "17758",
+        "tagged_new_tracks": "1204",
+        "songs_ge1_listener": "1041",
+        "songs_ge10_listeners": "478",
+        "songs_ge20_listeners": "281"
+      }
+    ]
+  },
+  "independent_source_content": {
+    "method": "Independent bz2/csv/ast parsing. SHA-256 per canonical ordered (label, float64 value) list, including empty lists; booleans and ID coverage checked separately.",
+    "tag_source_rows": 109269,
+    "tag_duplicate_rows": 983,
+    "tag_conflicts": [],
+    "tag_format_collisions": 0,
+    "raw_tag_pair_count": 3643410,
+    "normalized_tag_pair_count": 3643410,
+    "normalized_positive_tag_pair_count": 3643410,
+    "tag_empty_source_dicts": 20194,
+    "genre_source_rows": 109269,
+    "genre_duplicate_rows": 0,
+    "genre_conflicts": [],
+    "genre_nonzero_pairs": 237448,
+    "tag_distinct_track_ids": 108286,
+    "genre_dimensions": 685,
+    "genre_distinct_track_ids": 109269,
+    "tracks_parquet_rows": 109269,
+    "tracks_parquet_distinct_ids": 109269,
+    "content_ids_missing_from_tracks": [],
+    "tracks_content_mismatch_count": 0,
+    "tracks_content_mismatch_examples": [],
+    "tags_parquet_pairs": 3643410,
+    "tags_parquet_track_ids": 88092,
+    "tags_parquet_mismatched_ids": [],
+    "tags_parquet_missing_nonempty_ids": [],
+    "tags_parquet_unexpected_ids": [],
+    "genres_parquet_pairs": 237448,
+    "genres_parquet_track_ids": 109242,
+    "genres_parquet_mismatched_ids": [],
+    "genres_parquet_missing_nonempty_ids": [],
+    "genres_parquet_unexpected_ids": [],
+    "seconds": 36.17,
+    "all_checks_passed": true
+  },
+  "existing_unit_tests": {
+    "command": ".venv/bin/python -m unittest discover -s tests -v",
+    "tests_run": 1,
+    "passed": true
+  },
+  "notebook": {
+    "method": "Sequential exec of the six existing code cells in one independent Python namespace; no new Jupyter kernel and no notebook mutation.",
+    "code_cell_indexes": [
+      1,
+      3,
+      5,
+      7,
+      9,
+      11
+    ],
+    "all_passed": true
+  },
+  "reproduced_run_comparison": {
+    "command": ".venv/bin/python -u scripts/compare_data_runs.py",
+    "all_four_comparisons_passed": true,
+    "stdout": "一致：完整听歌记录，252,984,395 条；全体记录的内容指纹相同。\n一致：歌曲信息，109,269 条；全体记录的内容指纹相同。\n一致：2000人副本，4,343,429 条；全体记录的内容指纹相同。\n一致：20000人副本，42,978,876 条；全体记录的内容指纹相同。\n对比完成。运行耗时等信息可能不同，不影响记录内容。\n"
+  },
+  "limitations": [
+    "Event signatures use count, sum of DuckDB row hash, and bit_xor; they are not exact multiset differences or cryptographic equality proofs.",
+    "Content comparisons use per-track SHA-256 of canonical ordered label/value lists; flags and ID coverage checked separately.",
+    "The raw event archive was rehashed, not fully decompressed again during this audit.",
+    "Notebook code cells were replayed directly; kernel startup and notebook rendering were not retested."
+  ]
+}

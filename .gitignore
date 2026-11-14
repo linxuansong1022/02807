@@ -1,1 +1,9 @@
 .DS_Store
+/data/raw/
+/data/processed/
+/data/samples/
+/.venv/
+__pycache__/
+.ipynb_checkpoints/
+/data/tmp/
+/data/reproduced/

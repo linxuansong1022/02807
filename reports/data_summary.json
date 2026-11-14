@@ -1,0 +1,55 @@
+{
+  "content": {
+    "tag_source_rows": 109269,
+    "identical_tag_rows_removed": 983,
+    "genre_source_rows": 109269,
+    "identical_genre_rows_removed": 0,
+    "tag_file_tracks": 108286,
+    "empty_tag_tracks": 20194,
+    "normalized_tag_pairs": 3643410,
+    "format_collisions_merged": 0,
+    "genre_file_tracks": 109269,
+    "genre_dimensions": 685,
+    "zero_genre_tracks": 27
+  },
+  "events": {
+    "rows": 252984396,
+    "seconds": 146.82,
+    "parquet_bytes": 2101941974,
+    "dropped_rows": 0,
+    "deduplicated": false,
+    "timezone": "unspecified in source; kept timezone-naive",
+    "reused_in_this_run": true
+  },
+  "analysis_rows": 252984395,
+  "excluded_pre2005_events": 1,
+  "source_min_timestamp": "1970-01-01 01:00:36",
+  "date_floor": "2005-01-01",
+  "users": 119140,
+  "tracks": 56512,
+  "min_timestamp": "2005-02-14 01:07:46",
+  "max_timestamp": "2020-03-20 12:59:51",
+  "coverage": {
+    "event_tracks": 56512,
+    "event_tracks_with_positive_tags": 45589,
+    "event_tracks_with_genres": 56498,
+    "event_tracks_with_both": 45577
+  },
+  "samples": {
+    "dev": {
+      "events": 4343429,
+      "users": 2000,
+      "tracks": 51472
+    },
+    "standard": {
+      "events": 42978876,
+      "users": 20000,
+      "tracks": 56379
+    }
+  },
+  "seed": 42,
+  "sampling": "SHA-256(42:user_id) priority; not a final training population",
+  "total_seconds": 70.31,
+  "runtime_scope": "this preparation process; reused event conversion time reported separately",
+  "peak_rss_mib": 2042.9
+}

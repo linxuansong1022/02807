@@ -1,0 +1,35 @@
+{
+  "source": "https://zenodo.org/records/15394646",
+  "files": [
+    {
+      "file": "userid_trackid_timestamp.tsv.bz2",
+      "bytes": 2211449511,
+      "md5": "dfe82201036765f7463e6f3ce3d0f991",
+      "verified": true
+    },
+    {
+      "file": "id_tags_dict.tsv.bz2",
+      "bytes": 14817003,
+      "md5": "9c1ca4a3e04a9696b9449ec54ac40cd5",
+      "verified": true
+    },
+    {
+      "file": "id_tags_tf-idf.tsv.bz2",
+      "bytes": 44983347,
+      "md5": "6681d5c2bf214ad54465286fbbab1ed4",
+      "verified": true
+    },
+    {
+      "file": "id_genres_tf-idf.tsv.bz2",
+      "bytes": 2963194,
+      "md5": "a742b5fa1d2e2ce780101773e57bb7f5",
+      "verified": true
+    },
+    {
+      "file": "README.md",
+      "bytes": 20493,
+      "md5": "df379ed27dcefe5652b8db4e6783e304",
+      "verified": true
+    }
+  ]
+}

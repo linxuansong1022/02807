@@ -1,0 +1,13 @@
+{
+  "tag_source_rows": 109269,
+  "identical_tag_rows_removed": 983,
+  "genre_source_rows": 109269,
+  "identical_genre_rows_removed": 0,
+  "tag_file_tracks": 108286,
+  "empty_tag_tracks": 20194,
+  "normalized_tag_pairs": 3643410,
+  "format_collisions_merged": 0,
+  "genre_file_tracks": 109269,
+  "genre_dimensions": 685,
+  "zero_genre_tracks": 27
+}

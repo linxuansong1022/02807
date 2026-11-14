@@ -1,0 +1,16 @@
+{
+  "analysis_rows": 252984395,
+  "source_rows": 252984396,
+  "users": 119140,
+  "tracks": 56512,
+  "null_required_fields": 0,
+  "missing_track_references": 0,
+  "checks": {
+    "原始记录数等于处理后记录数加1条时间异常": true,
+    "用户、歌曲、时间没有空值": true,
+    "歌曲信息中每个编号只出现一次": true,
+    "每条听歌记录的歌曲都能在歌曲信息中找到": true,
+    "歌曲统计的播放总数与完整听歌文件一致": true
+  },
+  "preview_rows": 10
+}

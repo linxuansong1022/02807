@@ -1,0 +1,12 @@
+{
+  "purpose": "descriptive candidate grid, NOT a chosen train/validation/test split",
+  "train_user_rule": "at least 20 distinct tagged songs before T",
+  "new_song_rule": "global first_seen in [T, window_end), has positive tags",
+  "target_rule": "distinct eligible users in [song first_seen, first_seen+30 days)",
+  "years": [
+    2011,
+    2014,
+    2017
+  ],
+  "seconds": 27.3
+}
