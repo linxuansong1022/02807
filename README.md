@@ -4,7 +4,9 @@ This repository prepares Music4All-Onion listening events and track metadata for
 
 ## Run preprocessing
 
-Use macOS or Linux with Python 3.14, `uv`, and `curl`. Allow at least 8 GB of free disk space for the roughly 2.27 GB download, Parquet files, and temporary data. Run the commands from the repository root.
+This project uses `uv` to manage its Python environment and dependencies. Install `uv` before running the commands below. `uv sync --locked` uses Python 3.14 and downloads it if needed. [Official `uv` installation guide](https://docs.astral.sh/uv/getting-started/installation/)
+
+Use macOS or Linux with `curl`. Allow at least 8 GB of free disk space for the roughly 2.27 GB download, Parquet files, and temporary data. Run the commands from the repository root.
 
 ```bash
 uv sync --locked
