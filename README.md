@@ -26,6 +26,14 @@ uv run python scripts/inspect_splits.py
 
 Run this after preprocessing to count eligible users and new tracks for candidate dates. It writes feasibility statistics and a data handoff without creating train, validation, or test splits.
 
+## Open the notebook
+
+After preprocessing and checking candidate time windows, launch JupyterLab with the `notebook` dependency group and open the [data preparation notebook](notebooks/01_data_preparation.ipynb).
+
+```bash
+uv run --locked --group notebook jupyter lab
+```
+
 ## Generated outputs
 
 | Path | Contents |
