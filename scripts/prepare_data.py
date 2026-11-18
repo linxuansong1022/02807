@@ -1,26 +1,16 @@
-"""把原始听歌记录、标签和流派整理成后续程序可以直接读取的数据。
+"""Prepare listening events, tags, and genres for downstream analysis.
 
-输入（默认都在项目的 data/raw/）：
-    userid_trackid_timestamp.tsv.bz2：用户、歌曲、听歌时间。
-    id_tags_dict.tsv.bz2：歌曲标签及权重。
-    id_genres_tf-idf.tsv.bz2：歌曲流派的数值表示。
-    download_manifest.json：下载文件的校验清单，由 download_data.py 生成。
-    清单中的其他文件也会检查完整性，但标签数字版和 README 不参与数据整理。
+Reads the compressed event log, tag dictionary, genre TF-IDF, and download
+manifest from data/raw/. The other files in the manifest are verified too.
 
-主要输出：
-    data/processed/events_source.parquet：原始听歌记录的完整转换，保留全部行。
-    data/processed/events.parquet：排除 2005 年前记录后的完整听歌表。
-    data/processed/tracks.parquet：每首歌的标签、权重、流派和最早出现时间。
-    data/samples/：另外保存的 2,000 人、20,000 人副本，不是训练/测试划分。
-    reports/：统计说明、处理完成.txt 和三张图。
-    其他 Parquet 是中间表或单项统计，各函数中列出了用途。
+Writes the full source events, analysis events from 2005 onward, track
+metadata, and descriptive statistics to data/processed/. The two user
+samples go in data/samples/. Run summaries and figures go in reports/.
+Model training and formal dataset splits are outside this workflow.
 
-执行顺序：检查原始文件 → prepare_content → prepare_events → summarize → figures。
-本文件不训练模型，也不划分正式训练集、验证集和测试集。
-
-运行：.venv/bin/python -u scripts/prepare_data.py
-另存一份：在命令后加 --output-dir data/reproduced。
-此时输出位于 data/reproduced/ 下的 processed/、samples/、reports/。
+Run with `uv run python scripts/prepare_data.py`. Add
+`--output-dir data/reproduced` to write processed/, samples/, and reports/
+under a separate directory.
 """
 from __future__ import annotations
 
@@ -44,44 +34,22 @@ import pyarrow.parquet as pq
 
 
 def write_json(path, value):
-    """把一份 Python 统计结果保存为可读的 JSON 文本。
-
-    输入：path 是保存路径（Path）；value 是字典、列表等统计结果。
-    返回：无；在 path 写入文件，同名文件会覆盖。父文件夹须已存在。
-    例如：write_json(Path('reports/counts.json'), {'users': 2000})。
-    """
+    """Write readable JSON to a path whose parent directory already exists."""
     path.write_text(json.dumps(value, ensure_ascii=False, indent=2) + "\n")
 
 
 def normalize_tag(tag):
-    """统一一个标签的文字格式，不改变标签的含义。
-
-    输入：tag 是标签文字，例如 '  Hard   Rock  '。
-    返回：整理后的文字 'hard rock'，不生成文件。
-    做法：统一 Unicode 字符表示、转小写、去首尾空格、合并重复空格。
-    不把不同词语强行合并，例如 synthpop 和 synth pop 仍是两个标签。
-    """
+    """Normalize the Unicode form, case, and spacing of a tag."""
     return " ".join(unicodedata.normalize("NFC", tag).lower().split())
 
 
 def prepare_content(raw, out):
-    """读取并整理歌曲标签和流派。此处还不连接听歌记录。
+    """Write tag and genre features and return counts from the source files.
 
-    输入：
-        raw：原始文件夹（Path），须包含标签字典和流派 TF-IDF 压缩文件。
-        out：已存在的输出文件夹（Path）。
-    返回：统计字典，包含读取行数、不同歌曲数、重复行数、空标签数等。
-    写入 out 下的四个文件（同名覆盖）：
-        tags.parquet：每行是 track_id、tag、weight，一个歌曲—标签组合。
-        tag_track_ids.parquet：标签源文件出现过的全部不同歌曲编号，含空标签歌。
-        genres.parquet：每行是 track_id、genre、tfidf，只保存非零流派特征。
-        genre_track_ids.parquet：流派源文件出现过的全部不同歌曲编号。
-
-    标签字典中的文字先解析为标签和权重，再统一文字格式。
-    相同歌曲编号、相同内容只保留一份；内容冲突时停止，不任意选择。
-    格式统一后发生重名的标签取最大权重，不相加；零权重暂时保留。
+    The feature tables store one track-feature pair per row. Separate ID
+    tables preserve tracks with no tag or nonzero genre value. Identical rows
+    for a track are collapsed, and conflicting rows fail validation.
     """
-    # 第一部分：整理标签，例如 S01 的 {' Rock ': 100} 变为 S01、rock、100。
     rows, ids, empty, merged = [], {}, 0, 0
     tag_rows, tag_duplicates = 0, 0
     with bz2.open(raw / "id_tags_dict.tsv.bz2", "rt", encoding="utf-8") as f:
@@ -90,7 +58,7 @@ def prepare_content(raw, out):
         for track, encoded in reader:
             tag_rows += 1
             assert track, "Empty track ID"
-            tags = ast.literal_eval(encoded)  # 把字典文字读成数据，不执行文字中的代码。
+            tags = ast.literal_eval(encoded)
             assert isinstance(tags, dict)
             if track in ids:
                 assert ast.literal_eval(ids[track]) == tags, f"Conflicting tags for {track}"
@@ -105,7 +73,7 @@ def prepare_content(raw, out):
                 key = normalize_tag(tag)
                 assert key, f"Blank tag: {track}"
                 merged += key in clean
-                # 若 'Rock' 和 ' rock ' 合成一个词，取最大权重，避免人为加大权重。
+                # Use the strongest weight when spelling variants normalize to the same tag.
                 clean[key] = max(clean.get(key, 0), weight)
             for tag, weight in sorted(clean.items()):
                 rows.append({"track_id": track, "tag": tag, "weight": float(weight)})
@@ -113,7 +81,7 @@ def prepare_content(raw, out):
     pq.write_table(pa.Table.from_pylist(rows, schema=schema), out / "tags.parquet", compression="zstd")
     pq.write_table(pa.table({"track_id": sorted(ids)}), out / "tag_track_ids.parquet", compression="zstd")
 
-    # 第二部分：流派原表一列一个流派。这里只保存数值非零的项，减少无用的零。
+    # Store the nonzero entries from the source's wide genre table.
     genres, genre_ids, zero = [], {}, 0
     genre_rows, genre_duplicates = 0, 0
     with bz2.open(raw / "id_genres_tf-idf.tsv.bz2", "rt", encoding="utf-8") as f:
@@ -149,19 +117,11 @@ def prepare_content(raw, out):
 
 
 def prepare_events(raw, out):
-    """把完整压缩听歌日志转换为 Parquet，并把时间文字读成日期时间。
+    """Stream the full event log to Parquet and return conversion statistics.
 
-    输入：raw 和 out 是原始、输出文件夹（Path）。
-        raw 中须有 userid_trackid_timestamp.tsv.bz2；out 须已存在。
-    返回：包含原始记录数、转换耗时、输出大小等信息的字典。
-    写入：out/events_source.parquet、out/event_conversion.json。
-        表的三列为 user_id（文字）、track_id（文字）、timestamp（精确到秒的时间）。
-
-    分块读取，避免一次装入全部记录。每转换约一千万条打印一次进度。
-    时间按“年-月-日 时:分:秒”解析，保留源文件未指定时区的状态。
-    本函数不删行；异常日期筛选在 summarize 中进行。
-    先写 .partial 临时文件，全部完成后才改成正式文件名。
-    如果正式文件及转换记录已存在、且行数一致，直接复用，不重新解压。
+    The conversion preserves every row, string IDs, and timezone-naive
+    timestamps. It publishes the completed temporary file by renaming it
+    and can reuse a previous conversion with matching row counts.
     """
     target = out / "events_source.parquet"
     metrics = out / "event_conversion.json"
@@ -172,7 +132,7 @@ def prepare_events(raw, out):
         result["reused_in_this_run"] = True
         return result
     start = time.perf_counter()
-    # 明确每列如何读取：编号保留为文字；时间读成日期，不只是一串字符。
+    # Keep IDs as strings so leading zeros survive parsing.
     schema = pa.schema([("user_id", pa.string()), ("track_id", pa.string()),
                         ("timestamp", pa.timestamp("s"))])
     partial = target.with_suffix(".parquet.partial")
@@ -182,7 +142,6 @@ def prepare_events(raw, out):
                                parse_options=pacsv.ParseOptions(delimiter="\t"),
                                convert_options=pacsv.ConvertOptions(column_types=schema,
                                    strings_can_be_null=True,
-                                   # 例如 2013-01-27 21:42:38：年、月、日、小时、分钟、秒。
                                    timestamp_parsers=["%Y-%m-%d %H:%M:%S"]))
         assert reader.schema == schema, reader.schema
         with pq.ParquetWriter(partial, schema, compression="zstd") as writer:
@@ -204,29 +163,11 @@ def prepare_events(raw, out):
 
 
 def summarize(out, samples, reports, content, conversion, expected_rows=None):
-    """从已转换的数据生成清洗版、歌曲总表、统计和用户小副本。
+    """Build analysis tables, descriptive statistics, and deterministic user samples.
 
-    输入：
-        out：前两个函数输出的文件夹，含原始事件转换、标签和流派表。
-        samples：小副本输出文件夹；reports：说明输出文件夹。
-        content：prepare_content 返回的标签/流派统计字典。
-        conversion：prepare_events 返回的转换统计字典。
-        expected_rows：预期的原始事件行数；None 表示不核对指定行数。
-    返回：summary 字典，记录清洗前后数量、时间范围、内容覆盖和副本规模。
-    写入（已有同名结果会覆盖）：
-        out/events.parquet：保留 timestamp >= 2005-01-01 的完整分析事件。
-        out/tracks.parquet：一首歌一行，汇集标签、权重、流派和 first_seen。
-        out/track_stats.parquet、user_stats.parquet：全时期歌曲/用户统计。
-        out/track_first_seen.parquet、user_first_seen.parquet：最早出现时间。
-        out/monthly_events.parquet：每月播放数。
-        out/tag_frequency.parquet：每个正权重标签涉及多少首歌。
-        out/tag_weight_distribution.parquet：每种标签权重出现多少次。
-        samples/dev/、samples/standard/：用户清单、对应事件和歌曲信息。
-        reports/data_summary.json：本阶段统计；main 会再补充耗时和内存。
-
-    first_seen 来自完整清洗日志，不是小副本。没有播放的歌曲该值为空。
-    全时期播放数等统计只供了解数据，不能直接当作训练日期前的历史。
-    本函数不生成最终训练/验证/测试集合。
+    The summary records event counts, time ranges, metadata coverage, and
+    sample sizes. If supplied, expected_rows validates the original event
+    count. Track first_seen values come from the entire analysis log.
     """
     db = duckdb.connect()
     db.execute("SET threads=4")
@@ -235,20 +176,12 @@ def summarize(out, samples, reports, content, conversion, expected_rows=None):
     temp.mkdir(exist_ok=True)
     db.execute(f"SET temp_directory='{temp.as_posix()}'")
     def view(name, file):
-        """输入：临时表名 name 和 Parquet 路径 file；返回：无。
-
-        让当前数据库能用 name 查询这个文件，不复制或修改文件。
-        这里只建立本函数运行期间的查询名称，不创建新的磁盘文件。
-        """
+        """Expose a Parquet file as a view on this connection."""
         db.execute(f"CREATE VIEW {name} AS SELECT * FROM read_parquet('{file.as_posix()}')")
     def save(sql, path):
-        """输入：查询语句 sql 和输出路径 path；返回：无。
-
-        执行查询，并把得到的表保存成压缩 Parquet；同名输出会覆盖。
-        """
+        """Write the query result as compressed Parquet."""
         db.execute(f"COPY ({sql}) TO '{path.as_posix()}' (FORMAT PARQUET, COMPRESSION ZSTD)")
-    # 第一步：生成分析用听歌记录。当前原数据中只有一条孤立的 1970 年记录。
-    # 明确排除 2005 年前记录；events_source.parquet 仍保留全部原始事件。
+    # Start the analysis log in 2005. The source conversion keeps the lone 1970 event.
     view("source_events", out / "events_source.parquet")
     raw_n, raw_lo = db.execute("SELECT count(*), min(timestamp) FROM source_events").fetchone()
     assert raw_n == conversion["rows"]
@@ -261,7 +194,7 @@ def summarize(out, samples, reports, content, conversion, expected_rows=None):
           count(DISTINCT track_id), min(timestamp), max(timestamp) FROM events""").fetchone()
     assert 0 < n <= raw_n
     print(f"Full scan: {n:,} events, {users:,} users, {songs:,} songs, {lo} .. {hi}", flush=True)
-    # 第二步：分别按歌曲、用户统计。min(timestamp) 就是最早出现时间。
+    # Compute first plays and activity over the complete analysis log.
     save("""SELECT track_id, min(timestamp) first_seen, max(timestamp) last_seen,
          count(*) event_count, count(DISTINCT user_id) listener_count
          FROM events GROUP BY track_id""", out / "track_stats.parquet")
@@ -272,10 +205,8 @@ def summarize(out, samples, reports, content, conversion, expected_rows=None):
     view("user_stats", out / "user_stats.parquet")
     save("SELECT track_id, first_seen FROM track_stats", out / "track_first_seen.parquet")
     save("SELECT user_id, first_seen FROM user_stats", out / "user_first_seen.parquet")
-    # 第三步：用相同的歌曲编号，把标签、流派和最早时间放到一行中。
-    # 保留所有来源的歌曲编号；缺失列表填为空，不虚构标签。
-    # tags 与 tag_weights 按位置对应；genres 与 genre_tfidf 同样按位置对应。
-    # 可用标签列表仅取正权重，含零权重的原整理表仍保存在 tags.parquet。
+    # Keep IDs from every source and represent missing content with empty lists.
+    # Only positive tags populate the aligned tags and tag_weights lists in tracks.parquet.
     save("""WITH ids AS (SELECT track_id FROM track_stats UNION SELECT track_id FROM tag_track_ids
                           UNION SELECT track_id FROM genre_track_ids),
         t AS (SELECT track_id, list(tag ORDER BY tag) tags,
@@ -301,9 +232,7 @@ def summarize(out, samples, reports, content, conversion, expected_rows=None):
     save("""SELECT weight, count(*) tag_track_pairs FROM tags GROUP BY weight ORDER BY weight""",
          out / "tag_weight_distribution.parquet")
 
-    # 第四步：另外生成小副本，完整 events.parquet 不因此缩小。
-    # 根据用户编号和固定数字 42 算出稳定的排序，再取前 2000/20000 位。
-    # 每次选同一批用户，不按未来播放数筛选；保留入选用户全部分析事件。
+    # Rank user IDs by a seeded hash and keep the full histories of the selected users.
     all_users = [r[0] for r in db.execute("SELECT user_id FROM user_stats").fetchall()]
     ordered = sorted(all_users, key=lambda x: hashlib.sha256(f"42:{x}".encode()).digest())
     sample_results = {}
@@ -338,17 +267,7 @@ def summarize(out, samples, reports, content, conversion, expected_rows=None):
 
 
 def figures(out, reports):
-    """根据已生成的统计画三张图，不修改数据。
-
-    输入：out 下的 track_stats、tag_frequency、monthly_events 三份 Parquet。
-        reports 是说明输出文件夹（Path）。
-    返回：无。
-    写入 reports/figures/ 下的三张 PNG 图片（同名覆盖）：
-        song_popularity.png：按听众人数排序后的歌曲分布。
-        tag_frequency.png：出现歌曲数最多的 20 个标签。
-        monthly_events.png：每个月有多少条听歌记录。
-    图中统计使用全时期数据，只用于理解数据。
-    """
+    """Plot song popularity, tag frequency, and monthly activity from full-log statistics."""
     os.environ.setdefault("MPLCONFIGDIR", str(out.parent / "tmp" / "matplotlib"))
     import matplotlib
     matplotlib.use("Agg")
@@ -377,19 +296,7 @@ def figures(out, reports):
 
 
 def main():
-    """读取终端参数，安排整个处理过程，最后打印结果。
-
-    输入：终端命令中的可选参数：
-        --root：项目位置；默认使用当前脚本所在项目。
-        --expected-rows：预期的原始事件数，默认 252984396。
-        --output-dir：另存结果的位置；不指定则使用项目默认目录。
-    返回：无。
-    行为：检查原始文件完整性，依次调用上面的处理函数，写入统计和图片。
-    额外输出：reports/source_manifest.json（来源与校验记录）、
-        reports/处理完成.txt（可直接打开的数量说明）。
-        reports/data_summary.json 最后补上总耗时与当前进程峰值内存。
-    指定 --output-dir 后，processed/、samples/、reports/ 都放在该目录下。
-    """
+    """Verify source files, prepare data and figures, and write run reports."""
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--root", type=Path, default=Path(__file__).resolve().parents[1])
     parser.add_argument("--expected-rows", type=int, default=252984396)
@@ -406,7 +313,7 @@ def main():
     print(f"Source files: {raw}", flush=True)
     print(f"Processed data: {out}", flush=True)
     start = time.perf_counter()
-    # 先根据下载清单重新计算文件校验值；不一致就停止，避免处理损坏的文件。
+    # Recheck the downloaded files before preprocessing.
     manifest = json.loads((raw / "download_manifest.json").read_text())
     for item in manifest["files"]:
         h = hashlib.md5()
@@ -421,23 +328,22 @@ def main():
     figures(out, reports)
     summary["total_seconds"] = round(time.perf_counter()-start, 2)
     summary["runtime_scope"] = "this preparation process; reused event conversion time reported separately"
-    # 换算峰值内存：macOS 返回字节，Linux 返回 KiB，这里统一显示为 MiB。
     import sys
     summary["peak_rss_mib"] = round(resource.getrusage(resource.RUSAGE_SELF).ru_maxrss /
                                     (1024**2 if sys.platform == "darwin" else 1024), 1)
     write_json(reports / "data_summary.json", summary)
-    (reports / "处理完成.txt").write_text(
-        f"原始记录：{summary['events']['rows']:,} 条\n"
-        f"处理后记录：{summary['analysis_rows']:,} 条\n"
-        f"排除2005年前记录：{summary['excluded_pre2005_events']} 条\n"
-        f"用户：{summary['users']:,} 位\n歌曲：{summary['tracks']:,} 首\n"
-        f"时间：{summary['min_timestamp']} 至 {summary['max_timestamp']}\n"
-        f"完整结果：{out}\n小副本：{samples}\n"
-        "本次未划分训练集和测试集。\n")
+    completion_report = reports / "processing_complete.txt"
+    completion_report.write_text(
+        f"Source events: {summary['events']['rows']:,}\n"
+        f"Analysis events: {summary['analysis_rows']:,}\n"
+        f"Events excluded before 2005: {summary['excluded_pre2005_events']:,}\n"
+        f"Users: {summary['users']:,}\nTracks: {summary['tracks']:,}\n"
+        f"Time range: {summary['min_timestamp']} to {summary['max_timestamp']}\n"
+        f"Processed data: {out}\nUser samples: {samples}\n"
+        "Formal dataset splits are outside this preprocessing run.\n")
     print(json.dumps(summary, ensure_ascii=False, indent=2), flush=True)
-    print(f"处理完成。可打开：{reports / '处理完成.txt'}", flush=True)
+    print(f"Processing complete. Summary saved to {completion_report}", flush=True)
 
 
 if __name__ == "__main__":
-    # 在终端直接运行本文件时，从 main 开始；被别的 Python 文件导入时不自动运行。
     main()

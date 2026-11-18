@@ -1,11 +1,7 @@
-"""下载本项目用到的五个 Music4All-Onion v2 文件，并检查是否下载完整。
+"""Download and verify the five Music4All-Onion v2 source files.
 
-输入：下方 BASE 指定的官方地址，以及 FILES 中的文件名和官方 MD5 校验值。
-输出：项目 data/raw/ 下的五个原始文件，以及 download_manifest.json 下载清单。
-五个文件分别是：听歌日志、标签字典、标签数字版、流派数字版和 README 说明。
-本文件只负责下载，不清洗数据，不训练模型。
-
-运行：.venv/bin/python scripts/download_data.py
+The files and download_manifest.json are stored in data/raw/.
+Run with uv run python scripts/download_data.py.
 """
 import hashlib
 import json
@@ -15,7 +11,6 @@ import subprocess
 ROOT = Path(__file__).resolve().parents[1]
 RAW = ROOT / "data/raw"
 BASE = "https://zenodo.org/records/15394646"
-# MD5 可以理解为文件的校验号码。下载后重算，判断文件是否与官方版本一致。
 FILES = {
     "userid_trackid_timestamp.tsv.bz2": "dfe82201036765f7463e6f3ce3d0f991",
     "id_tags_dict.tsv.bz2": "9c1ca4a3e04a9696b9449ec54ac40cd5",
@@ -26,12 +21,7 @@ FILES = {
 
 
 def checksum(path):
-    """计算一个文件的 MD5 校验号码，不修改文件。
-
-    输入：path 是本地文件路径（Path）。
-    返回：由数字和字母组成的校验文字，用于与官方值比较。
-    分块读取大文件，不一次把整个文件装进内存。
-    """
+    """Return the MD5 digest without loading the entire file into memory."""
     h = hashlib.md5()
     with path.open("rb") as f:
         for block in iter(lambda: f.read(8*1024*1024), b""): h.update(block)
@@ -39,16 +29,10 @@ def checksum(path):
 
 
 def main():
-    """按 FILES 清单下载并检查所有文件。
+    """Verify cached or newly downloaded files and write their manifest.
 
-    输入：模块中的官方地址 BASE、下载目录 RAW、文件清单 FILES。
-    返回：无；在终端打印每个文件是否验证通过。
-    输出：data/raw/ 下的五个原始文件和 download_manifest.json。
-    清单记录每个文件的名称、字节大小、MD5 和验证状态。
-
-    已存在的文件仍检查 MD5，但不重复下载。
-    未完成的下载先保存为 .part，支持继续下载；校验通过后改为正式名称。
-    若校验失败，程序停止，避免把不完整文件当作可用数据。
+    Downloads can resume from .part files, which are renamed after their
+    checksums match the published values.
     """
     RAW.mkdir(parents=True, exist_ok=True)
     manifest = []
@@ -68,5 +52,4 @@ def main():
 
 
 if __name__ == "__main__":
-    # 直接运行这个文件时，执行上面的下载流程。
     main()
