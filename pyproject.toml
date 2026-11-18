@@ -1,0 +1,9 @@
+[project]
+name = "music-cold-start-preprocessing"
+version = "0.1.0"
+requires-python = ">=3.14,<3.15"
+dependencies = [
+    "duckdb==2.0.0",
+    "matplotlib==3.11.2",
+    "pyarrow==26.0.1",
+]
