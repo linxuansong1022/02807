@@ -2,6 +2,39 @@
 
 This repository prepares Music4All-Onion listening events and track metadata for a study of recommending tracks with no training interactions. It includes data download, preprocessing, and optional checks of candidate time windows.
 
+## Folder structure
+
+```text
+.
+├── .gitignore                       # Local files excluded from Git
+├── .python-version                  # Python version selected by uv
+├── README.md                        # Setup and workflow instructions
+├── pyproject.toml                   # Project dependencies
+├── uv.lock                          # Locked dependency versions
+├── docs/
+│   └── project.pdf                  # Course project specification
+├── notebooks/
+│   ├── 01_data_preparation.ipynb    # Prepared data inspection and figures
+│   └── 02_data_splitting.ipynb      # Candidate cutoffs and split design
+├── scripts/
+│   ├── download_data.py             # Download and verify source files
+│   ├── prepare_data.py              # Prepare analysis tables and user samples
+│   ├── inspect_splits.py            # Summarize candidate time windows
+│   ├── build_splits.py              # Generate the fixed temporal split
+│   ├── verify_data.py               # Check datasets against the reference
+│   └── evaluate.py                  # Score ranked user recommendations
+├── tests/
+│   └── test_prepare_data.py         # Verify preprocessing on synthetic data
+├── validation/
+│   └── data_reference.json          # Expected schemas, counts, and fingerprints
+├── data/                            # Local datasets
+│   ├── raw/
+│   ├── processed/
+│   ├── samples/
+│   └── splits/
+└── reports/                         # Local summaries and figures
+```
+
 ## Run preprocessing
 
 This project uses `uv` to manage its Python environment and dependencies. Install `uv` before running the commands below. `uv sync --locked` uses Python 3.14 and downloads it if needed. [Official `uv` installation guide](https://docs.astral.sh/uv/getting-started/installation/)
@@ -59,6 +92,18 @@ Read the following local files from `data/splits/` after the command succeeds. J
 | `track_splits.parquet` | Train, validation, and test track IDs with global `first_seen`, including evaluation tracks without eligible listeners |
 | `ground_truth.parquet` | Distinct eligible listeners during each evaluation track's first 30 days. Use these rows as evaluation labels. |
 | `split_config.json` | Arrival windows, eligibility rules, and output counts |
+
+## Evaluate recommendations
+
+Provide a Parquet file for the selected split with the original string `track_id` and `user_id` columns and an integer `rank` column. Each track in that split needs 1,000 distinct eligible users at ranks 1–1,000, where rank 1 is best. Additional ranks must also have unique users and ranks per track. Optional scores are ignored.
+
+```bash
+uv run --locked python scripts/evaluate.py --predictions path/to/predictions.parquet --split validation
+```
+
+Use `--split test` for test predictions. The evaluator reports macro Recall and binary NDCG at 100, 500, and 1,000. Recall uses all observed listeners for each track as its denominator. Tracks with zero observed listeners are counted separately, and each remaining track contributes equally to the average.
+
+Python callers can import `evaluate` from `scripts.evaluate` and pass the prediction path and split.
 
 ## Open the notebooks
 
