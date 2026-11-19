@@ -257,6 +257,126 @@
         "sum": "520794166299106869273312",
         "xor": "17590452794308249670"
       }
+    },
+    "data/splits/eligible_users.parquet": {
+      "row_count": 105578,
+      "schema": [
+        {
+          "name": "user_id",
+          "type": "string",
+          "nullable": false
+        }
+      ],
+      "fingerprint": {
+        "sum": "975655201204471049483526",
+        "xor": "17578800464010986706"
+      }
+    },
+    "data/splits/train_interactions.parquet": {
+      "row_count": 44523829,
+      "schema": [
+        {
+          "name": "user_id",
+          "type": "string",
+          "nullable": false
+        },
+        {
+          "name": "track_id",
+          "type": "string",
+          "nullable": false
+        },
+        {
+          "name": "play_count",
+          "type": "int64",
+          "nullable": false
+        }
+      ],
+      "fingerprint": {
+        "sum": "410659889479435803954709712",
+        "xor": "2368154041529963152"
+      }
+    },
+    "data/splits/track_splits.parquet": {
+      "row_count": 51966,
+      "schema": [
+        {
+          "name": "track_id",
+          "type": "string",
+          "nullable": false
+        },
+        {
+          "name": "split",
+          "type": "string",
+          "nullable": false
+        },
+        {
+          "name": "first_seen",
+          "type": "timestamp[us]",
+          "nullable": false
+        }
+      ],
+      "fingerprint": {
+        "sum": "477152504605527877512289",
+        "xor": "12823221512500078683"
+      }
+    },
+    "data/splits/ground_truth.parquet": {
+      "row_count": 224178,
+      "schema": [
+        {
+          "name": "split",
+          "type": "string",
+          "nullable": false
+        },
+        {
+          "name": "track_id",
+          "type": "string",
+          "nullable": false
+        },
+        {
+          "name": "user_id",
+          "type": "string",
+          "nullable": false
+        }
+      ],
+      "fingerprint": {
+        "sum": "2069958935254049511140605",
+        "xor": "9627814542945267965"
+      }
+    }
+  },
+  "split_config": {
+    "dataset": "Music4All-Onion v2",
+    "training_cutoff_exclusive": "2018-01-01",
+    "validation": {
+      "start_inclusive": "2018-01-01",
+      "end_exclusive": "2018-06-30"
+    },
+    "test": {
+      "start_inclusive": "2018-07-30",
+      "end_exclusive": "2019-01-26"
+    },
+    "observation_days": 30,
+    "eligible_user_rule": "Played at least 20 distinct tracks with positive tags before the training cutoff.",
+    "new_track_rule": "Global first_seen in the arrival window, positive tags, and zero pre-cutoff plays.",
+    "ground_truth_rule": "Distinct eligible listeners from first_seen inclusive to first_seen plus 30 days exclusive.",
+    "counts": {
+      "eligible_users": 105578,
+      "train": {
+        "tracks": 49393,
+        "user_track_pairs": 44523829,
+        "plays": 214907585
+      },
+      "validation": {
+        "tracks": 1274,
+        "ground_truth_pairs": 114724,
+        "zero_listener_tracks": 0
+      },
+      "test": {
+        "tracks": 1299,
+        "ground_truth_pairs": 109454,
+        "zero_listener_tracks": 0
+      }
     }
   }
 }

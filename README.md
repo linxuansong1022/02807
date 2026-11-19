@@ -18,17 +18,17 @@ The downloader fetches the listening log, tag dictionary, tag and genre TF-IDF f
 
 Preprocessing streams the listening log into Parquet, creates an analysis log starting in 2005, normalizes tags, and joins track metadata. It preserves repeated plays and keeps timestamps in the source's timezone-naive format.
 
-## Verify preprocessed data
+## Verify the data pipeline
 
-After preprocessing, check the analysis events and tracks plus all three Parquet tables in each user sample against the [committed reference](validation/data_reference.json).
+After preprocessing and [building the fixed split](#build-the-fixed-temporal-split), check the analysis tables, both user samples, and the five split files against the [committed reference](validation/data_reference.json).
 
 ```bash
 uv run --locked python scripts/verify_data.py --check
 ```
 
-The read-only check reports PASS or FAIL for each file based on its row count, schema, and the sum and XOR of its row hashes. It exits with a failure status if any file is missing or differs. The hashes include repeated rows and allow rows to appear in a different order. Use the locked environment because DuckDB's hash values can change across versions. [DuckDB hash documentation](https://duckdb.org/docs/2.0/sql/functions/utility#hashvalue)
+The read-only command prints `PASS`, `FAIL`, or `MISSING` per file and exits with a failure status for missing files or mismatches. It compares Parquet row counts, schemas, and order-independent fingerprints, and checks the split configuration, training cutoff, and ground-truth timing. Use the locked environment because DuckDB's hash values can change across versions. [DuckDB hash documentation](https://duckdb.org/docs/2.0/sql/functions/utility#hashvalue)
 
-To replace the reference after an intentional data change, run the command below and review the resulting Git diff.
+After an intentional data change, explicitly regenerate the reference from a complete local build and review the resulting Git diff.
 
 ```bash
 uv run --locked python scripts/verify_data.py --write-reference
@@ -42,13 +42,34 @@ uv run python scripts/inspect_splits.py
 
 Run this after preprocessing to count eligible users and new tracks for candidate dates. It writes feasibility statistics and a data handoff without creating train, validation, or test splits.
 
-## Open the notebook
+## Build the fixed temporal split
 
-After preprocessing and checking candidate time windows, launch JupyterLab with the `notebook` dependency group and open the [data preparation notebook](notebooks/01_data_preparation.ipynb).
+After preprocessing the full dataset, run the builder from the repository root.
+
+```bash
+uv run --locked python scripts/build_splits.py
+```
+
+Read the following local files from `data/splits/` after the command succeeds. Join on the original string IDs and use `data/processed/tracks.parquet` for content features.
+
+| File | Use |
+| --- | --- |
+| `eligible_users.parquet` | Candidate user IDs for training and evaluation |
+| `train_interactions.parquet` | Play counts per eligible user and track before 2018-01-01, including tracks without tags |
+| `track_splits.parquet` | Train, validation, and test track IDs with global `first_seen`, including evaluation tracks without eligible listeners |
+| `ground_truth.parquet` | Distinct eligible listeners during each evaluation track's first 30 days. Use these rows as evaluation labels. |
+| `split_config.json` | Arrival windows, eligibility rules, and output counts |
+
+## Open the notebooks
+
+After preprocessing, launch JupyterLab with the `notebook` dependency group.
 
 ```bash
 uv run --locked --group notebook jupyter lab
 ```
+
+- Inspect the prepared data, samples, and figures in the [data preparation notebook](notebooks/01_data_preparation.ipynb).
+- Compare training cutoffs and evaluation windows in the [temporal split notebook](notebooks/02_data_splitting.ipynb).
 
 ## Generated outputs
 

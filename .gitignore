@@ -2,6 +2,7 @@
 /data/raw/
 /data/processed/
 /data/samples/
+/data/splits/
 /.venv/
 __pycache__/
 .ipynb_checkpoints/
