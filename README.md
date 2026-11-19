@@ -18,17 +18,17 @@ The downloader fetches the listening log, tag dictionary, tag and genre TF-IDF f
 
 Preprocessing streams the listening log into Parquet, creates an analysis log starting in 2005, normalizes tags, and joins track metadata. It preserves repeated plays and keeps timestamps in the source's timezone-naive format.
 
-## Verify preprocessed data
+## Verify the data pipeline
 
-After preprocessing, check the analysis events and tracks plus all three Parquet tables in each user sample against the [committed reference](validation/data_reference.json).
+After preprocessing and [building the fixed split](#build-the-fixed-temporal-split), check the analysis tables, both user samples, and the five split files against the [committed reference](validation/data_reference.json).
 
 ```bash
 uv run --locked python scripts/verify_data.py --check
 ```
 
-The read-only check reports PASS or FAIL for each file based on its row count, schema, and the sum and XOR of its row hashes. It exits with a failure status if any file is missing or differs. The hashes include repeated rows and allow rows to appear in a different order. Use the locked environment because DuckDB's hash values can change across versions. [DuckDB hash documentation](https://duckdb.org/docs/2.0/sql/functions/utility#hashvalue)
+The read-only command prints `PASS`, `FAIL`, or `MISSING` per file and exits with a failure status for missing files or mismatches. It compares Parquet row counts, schemas, and order-independent fingerprints, and checks the split configuration, training cutoff, and ground-truth timing. Use the locked environment because DuckDB's hash values can change across versions. [DuckDB hash documentation](https://duckdb.org/docs/2.0/sql/functions/utility#hashvalue)
 
-To replace the reference after an intentional data change, run the command below and review the resulting Git diff.
+After an intentional data change, explicitly regenerate the reference from a complete local build and review the resulting Git diff.
 
 ```bash
 uv run --locked python scripts/verify_data.py --write-reference
