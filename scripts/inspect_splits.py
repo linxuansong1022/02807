@@ -14,6 +14,12 @@ import time
 import duckdb
 
 ROOT = Path(__file__).resolve().parents[1]
+ELIGIBLE_USERS_SQL = """
+    SELECT user_id FROM events JOIN tracks USING (track_id)
+    WHERE timestamp < ? AND has_tags
+    GROUP BY user_id
+    HAVING count(DISTINCT track_id) >= 20
+"""
 
 
 def main():
@@ -40,10 +46,7 @@ def main():
         cutoff = dt.datetime(year, 1, 1)
         end = min(cutoff + dt.timedelta(days=180), hi - dt.timedelta(days=30))
         if end <= cutoff: continue
-        db.execute("""CREATE OR REPLACE TEMP TABLE eligible AS
-            SELECT user_id FROM events JOIN tracks USING(track_id)
-            WHERE timestamp < ? AND has_tags GROUP BY user_id
-            HAVING count(DISTINCT track_id) >= 20""", [cutoff])
+        db.execute("CREATE OR REPLACE TEMP TABLE eligible AS " + ELIGIBLE_USERS_SQL, [cutoff])
         db.execute("""CREATE OR REPLACE TEMP TABLE new_tracks AS
             SELECT track_id, first_seen FROM tracks
             WHERE has_tags AND first_seen >= ? AND first_seen < ?""", [cutoff, end])
