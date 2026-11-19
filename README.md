@@ -42,13 +42,34 @@ uv run python scripts/inspect_splits.py
 
 Run this after preprocessing to count eligible users and new tracks for candidate dates. It writes feasibility statistics and a data handoff without creating train, validation, or test splits.
 
-## Open the notebook
+## Build the fixed temporal split
 
-After preprocessing and checking candidate time windows, launch JupyterLab with the `notebook` dependency group and open the [data preparation notebook](notebooks/01_data_preparation.ipynb).
+After preprocessing the full dataset, run the builder from the repository root.
+
+```bash
+uv run --locked python scripts/build_splits.py
+```
+
+Read the following local files from `data/splits/` after the command succeeds. Join on the original string IDs and use `data/processed/tracks.parquet` for content features.
+
+| File | Use |
+| --- | --- |
+| `eligible_users.parquet` | Candidate user IDs for training and evaluation |
+| `train_interactions.parquet` | Play counts per eligible user and track before 2018-01-01, including tracks without tags |
+| `track_splits.parquet` | Train, validation, and test track IDs with global `first_seen`, including evaluation tracks without eligible listeners |
+| `ground_truth.parquet` | Distinct eligible listeners during each evaluation track's first 30 days. Use these rows as evaluation labels. |
+| `split_config.json` | Arrival windows, eligibility rules, and output counts |
+
+## Open the notebooks
+
+After preprocessing, launch JupyterLab with the `notebook` dependency group.
 
 ```bash
 uv run --locked --group notebook jupyter lab
 ```
+
+- Inspect the prepared data, samples, and figures in the [data preparation notebook](notebooks/01_data_preparation.ipynb).
+- Compare training cutoffs and evaluation windows in the [temporal split notebook](notebooks/02_data_splitting.ipynb).
 
 ## Generated outputs
 
