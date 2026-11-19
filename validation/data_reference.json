@@ -1,0 +1,262 @@
+{
+  "duckdb_version": "2.0.0",
+  "files": {
+    "data/processed/events.parquet": {
+      "row_count": 252984395,
+      "schema": [
+        {
+          "name": "user_id",
+          "type": "string",
+          "nullable": false
+        },
+        {
+          "name": "track_id",
+          "type": "string",
+          "nullable": false
+        },
+        {
+          "name": "timestamp",
+          "type": "timestamp[us]",
+          "nullable": false
+        }
+      ],
+      "fingerprint": {
+        "sum": "2333238203572745583459308156",
+        "xor": "3363592837346876362"
+      }
+    },
+    "data/processed/tracks.parquet": {
+      "row_count": 109269,
+      "schema": [
+        {
+          "name": "track_id",
+          "type": "string",
+          "nullable": false
+        },
+        {
+          "name": "tags",
+          "type": "list<element: string>",
+          "nullable": true
+        },
+        {
+          "name": "tag_weights",
+          "type": "list<element: double>",
+          "nullable": true
+        },
+        {
+          "name": "genres",
+          "type": "list<element: string>",
+          "nullable": true
+        },
+        {
+          "name": "genre_tfidf",
+          "type": "list<element: double>",
+          "nullable": true
+        },
+        {
+          "name": "has_tags",
+          "type": "bool",
+          "nullable": true
+        },
+        {
+          "name": "has_genres",
+          "type": "bool",
+          "nullable": true
+        },
+        {
+          "name": "first_seen",
+          "type": "timestamp[us]",
+          "nullable": true
+        }
+      ],
+      "fingerprint": {
+        "sum": "1006896418662550924762440",
+        "xor": "1512898635437179898"
+      }
+    },
+    "data/samples/dev/users.parquet": {
+      "row_count": 2000,
+      "schema": [
+        {
+          "name": "user_id",
+          "type": "string",
+          "nullable": true
+        },
+        {
+          "name": "sample_order",
+          "type": "int64",
+          "nullable": true
+        }
+      ],
+      "fingerprint": {
+        "sum": "18356985307035695383781",
+        "xor": "16957229566373596083"
+      }
+    },
+    "data/samples/dev/events.parquet": {
+      "row_count": 4343429,
+      "schema": [
+        {
+          "name": "user_id",
+          "type": "string",
+          "nullable": false
+        },
+        {
+          "name": "track_id",
+          "type": "string",
+          "nullable": false
+        },
+        {
+          "name": "timestamp",
+          "type": "timestamp[us]",
+          "nullable": false
+        }
+      ],
+      "fingerprint": {
+        "sum": "40072183872701686464081248",
+        "xor": "3519830231804059896"
+      }
+    },
+    "data/samples/dev/tracks.parquet": {
+      "row_count": 51472,
+      "schema": [
+        {
+          "name": "track_id",
+          "type": "string",
+          "nullable": false
+        },
+        {
+          "name": "tags",
+          "type": "list<element: string>",
+          "nullable": true
+        },
+        {
+          "name": "tag_weights",
+          "type": "list<element: double>",
+          "nullable": true
+        },
+        {
+          "name": "genres",
+          "type": "list<element: string>",
+          "nullable": true
+        },
+        {
+          "name": "genre_tfidf",
+          "type": "list<element: double>",
+          "nullable": true
+        },
+        {
+          "name": "has_tags",
+          "type": "bool",
+          "nullable": false
+        },
+        {
+          "name": "has_genres",
+          "type": "bool",
+          "nullable": false
+        },
+        {
+          "name": "first_seen",
+          "type": "timestamp[us]",
+          "nullable": true
+        }
+      ],
+      "fingerprint": {
+        "sum": "474645478806092725514850",
+        "xor": "5465285736837718576"
+      }
+    },
+    "data/samples/standard/users.parquet": {
+      "row_count": 20000,
+      "schema": [
+        {
+          "name": "user_id",
+          "type": "string",
+          "nullable": true
+        },
+        {
+          "name": "sample_order",
+          "type": "int64",
+          "nullable": true
+        }
+      ],
+      "fingerprint": {
+        "sum": "184637273663916489394422",
+        "xor": "10045696239619243200"
+      }
+    },
+    "data/samples/standard/events.parquet": {
+      "row_count": 42978876,
+      "schema": [
+        {
+          "name": "user_id",
+          "type": "string",
+          "nullable": false
+        },
+        {
+          "name": "track_id",
+          "type": "string",
+          "nullable": false
+        },
+        {
+          "name": "timestamp",
+          "type": "timestamp[us]",
+          "nullable": false
+        }
+      ],
+      "fingerprint": {
+        "sum": "396390963323396096305776277",
+        "xor": "487193690206066567"
+      }
+    },
+    "data/samples/standard/tracks.parquet": {
+      "row_count": 56379,
+      "schema": [
+        {
+          "name": "track_id",
+          "type": "string",
+          "nullable": false
+        },
+        {
+          "name": "tags",
+          "type": "list<element: string>",
+          "nullable": true
+        },
+        {
+          "name": "tag_weights",
+          "type": "list<element: double>",
+          "nullable": true
+        },
+        {
+          "name": "genres",
+          "type": "list<element: string>",
+          "nullable": true
+        },
+        {
+          "name": "genre_tfidf",
+          "type": "list<element: double>",
+          "nullable": true
+        },
+        {
+          "name": "has_tags",
+          "type": "bool",
+          "nullable": false
+        },
+        {
+          "name": "has_genres",
+          "type": "bool",
+          "nullable": false
+        },
+        {
+          "name": "first_seen",
+          "type": "timestamp[us]",
+          "nullable": true
+        }
+      ],
+      "fingerprint": {
+        "sum": "520794166299106869273312",
+        "xor": "17590452794308249670"
+      }
+    }
+  }
+}
