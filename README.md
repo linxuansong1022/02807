@@ -15,18 +15,26 @@ This repository prepares Music4All-Onion listening events and track metadata for
 │   └── project.pdf                  # Course project specification
 ├── notebooks/
 │   ├── 01_data_preparation.ipynb    # Prepared data inspection and figures
-│   └── 02_data_splitting.ipynb      # Candidate cutoffs and split design
+│   ├── 02_data_splitting.ipynb      # Candidate cutoffs and split design
+│   └── 03_retrieval.ipynb           # Candidate-pool validation and retrieval benchmark
 ├── scripts/
 │   ├── download_data.py             # Download and verify source files
 │   ├── prepare_data.py              # Prepare analysis tables and user samples
 │   ├── inspect_splits.py            # Summarize candidate time windows
 │   ├── build_splits.py              # Generate the fixed temporal split
 │   ├── verify_data.py               # Check datasets against the reference
-│   └── evaluate.py                  # Score ranked user recommendations
+│   ├── evaluate.py                  # Score ranked user recommendations
+│   ├── evaluate_retrieval.py        # Tune tags and evaluate listener rankings
+│   ├── retrieval_data.py            # Read content and split tables
+│   ├── retrieval.py                 # Exact Jaccard and MinHash LSH
+│   ├── benchmark_retrieval.py       # Measure neighbor recall, speed, and memory
+│   └── plot_lsh_s_curve.py          # Plot candidate probability and scaling
 ├── tests/
-│   └── test_prepare_data.py         # Verify preprocessing on synthetic data
+│   ├── test_prepare_data.py         # Verify preprocessing on a small fixture
+│   └── test_retrieval.py            # Check retrieval on the prepared dataset
 ├── validation/
-│   └── data_reference.json          # Expected schemas, counts, and fingerprints
+│   ├── data_reference.json          # Expected schemas, counts, and fingerprints
+│   └── retrieval_snapshot.json      # Fixed results for the retrieval notebook
 ├── data/                            # Local datasets
 │   ├── raw/
 │   ├── processed/
@@ -105,6 +113,28 @@ Use `--split test` for test predictions. The evaluator reports macro Recall and 
 
 Python callers can import `evaluate` from `scripts.evaluate` and pass the prediction path and split.
 
+## Validate the candidate pool and benchmark retrieval
+
+The [retrieval notebook](notebooks/03_retrieval.ipynb) reads one fixed [validation snapshot](validation/retrieval_snapshot.json). It includes all 15 tag trials, all 72 retrieval benchmarks, listener metrics and fallback groups. The notebook checks the snapshot digest and can run without the local data or reports.
+
+To repeat the experiment after verifying the prepared data and fixed split, run:
+
+```bash
+uv run --locked python scripts/evaluate_retrieval.py
+```
+
+Each completed experiment is published in a new `reports/retrieval/runs/<run-id>/` directory. The manifest identifies its scope and contains SHA-256 digests of its inputs and artifacts. A tuning-only run (`--stage validation`) has no final snapshot. The default and `--stage benchmark` run tuning and benchmarking together. The standalone benchmarking script uses a separate output directory. Fresh runs measure timing and peak process memory on the current machine, so these values and the fastest qualifying configuration can vary. The notebook keeps its fixed snapshot until the snapshot file and its pinned SHA-256 are deliberately updated together.
+
+The tag grid uses five minimum weights and three frequency caps. Fit tag prevalence on all eligible, originally tagged training songs, including songs later left empty by filtering. Drop empty songs from the index. Select by validation listener Recall@100 from exact retrieval, breaking ties with NDCG@100.
+
+Retrieve up to 50 songs with positive Jaccard similarity, ordered by descending similarity and ascending track ID. Empty queries return no neighbors. For each eligible listener, sum similarity times `log1p(play_count)` over neighbors played at least twice before the cutoff. Fill ranks through 1,000 with unused eligible users in descending training-play order, breaking ties by user ID. Downstream systems can access the scores in eligible-user ID order via `ListenerPool.scores()`.
+
+Neighbor Recall@50 uses each query's exact positive top list as its denominator and reports queries with no positive neighbors separately. Missing neighbor positions are NaN in `neighbor_jaccard.npy`. Band selection uses candidate probability at the 10th percentile of positive neighbor scores and measured macro neighbor recall, both with example targets of 90%. The 88,092-song stress cohort excludes empty songs after filtering and is used for retrieval only.
+
+`fallback_by_track.parquet` records raw and kept tag counts, positive neighbor counts for the method and exact search, uncapped candidate users, fill slots, listener hits and recall. `fallback_groups.csv` separates songs with emptied tags, fewer than 50 positive neighbors, 50 neighbors but fewer than 1,000 candidate users, and sufficient neighbors and candidates. Songs with fewer than 50 neighbors can still have enough candidates. The table reports both group size and the number actually requiring fill.
+
+For downstream clustering, align `pool.scores(neighbors)` with `pool.user_ids`. In this experiment the content pool is the first `min(content_count, 1000)` users from `ranked, content_count = pool.rank(neighbors)`. Any remaining ranks are activity fills with zero content score. The fixed results evaluate the candidate pool on validation. The full-system comparison requires D's clustering and fusion.
+
 ## Open the notebooks
 
 After preprocessing, launch JupyterLab with the `notebook` dependency group.
@@ -115,6 +145,7 @@ uv run --locked --group notebook jupyter lab
 
 - Inspect the prepared data, samples, and figures in the [data preparation notebook](notebooks/01_data_preparation.ipynb).
 - Compare training cutoffs and evaluation windows in the [temporal split notebook](notebooks/02_data_splitting.ipynb).
+- Review candidate-pool validation and the retrieval figures in the [retrieval notebook](notebooks/03_retrieval.ipynb).
 
 ## Generated outputs
 
@@ -138,4 +169,4 @@ Track `first_seen` comes from the full analysis log, so it stays consistent acro
 uv run python -m unittest discover -s tests -v
 ```
 
-The tests use synthetic data and run without the full download. `pyproject.toml` and `uv.lock` define the environment, and `.python-version` selects Python 3.14.
+The preprocessing test runs without the full download. The retrieval tests use the prepared Music4All-Onion data and B's fixed split. `pyproject.toml` and `uv.lock` define the environment, and `.python-version` selects Python 3.14.
