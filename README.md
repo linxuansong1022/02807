@@ -16,8 +16,8 @@ This project ranks potential listeners for cold-start tracks using Music4All-Oni
 ├── notebooks/
 │   ├── 01_data_preparation.ipynb    # Prepared data inspection and figures
 │   ├── 02_data_splitting.ipynb      # Temporal split and sparse feature diagnostics
-│   ├── 03_baselines.ipynb           # Baseline costs, coverage, and validation results
-│   └── 04_als_ridge.ipynb           # ALS factors, Ridge diagnostics, and validation results
+│   ├── 03_baselines.ipynb           # Baseline diagnostics, validation, and test results
+│   └── 04_als_ridge.ipynb           # ALS factors, Ridge diagnostics, validation, and test results
 ├── scripts/
 │   ├── data/
 │   │   ├── download_data.py         # Download and verify source files
@@ -131,7 +131,7 @@ uv run --locked python -m scripts.common.evaluate --split validation --predictio
 
 The same evaluation command accepts the random and most-active prediction files. The generator writes `baseline_{random,most_active,tag_profile}_{split}.parquet` under the Git-ignored `data/predictions/` directory. Each track has 1,000 distinct eligible users at ranks 1–1,000. Most-active saves pre-cutoff play totals as scores, tag profile saves TF-IDF cosine similarities, and random uses seed 42 with a separate stream for each split. Activity and similarity ties use ascending user ID.
 
-Use `--split test` to generate test predictions for the final evaluation phase. Use `--batch-size` to adjust the number of user profiles and scores held at once. The notebook runs the three baselines on validation and compares the metrics, coverage, and computational cost. [Baselines notebook](notebooks/03_baselines.ipynb)
+Use `--batch-size` to adjust the number of user profiles and scores held at once. The notebook compares the three baselines in separate validation and test sections. [Baselines notebook](notebooks/03_baselines.ipynb)
 
 ## Train implicit ALS
 
@@ -162,7 +162,7 @@ uv run --locked python -m scripts.models.ridge --split validation
 uv run --locked python -m scripts.common.evaluate --split validation --predictions data/predictions/ridge_validation.parquet
 ```
 
-Use `--help` for solver, feature weighting, and batch-size options. The notebook compares Ridge to the three existing validation baseline files. Generate any missing baseline files with the baseline command above. For the final evaluation phase, `--split test` applies the saved mapping and writes the equivalent test artifacts.
+Use `--help` for solver, feature weighting, and batch-size options. The notebook compares Ridge to the three existing validation baseline files. Generate any missing validation baseline files with the baseline command above.
 
 | Git-ignored artifact | Schema or contents |
 | --- | --- |
@@ -186,6 +186,20 @@ Use `--split test` for test predictions. The evaluator reports macro Recall and 
 
 Python callers can import `evaluate` from `scripts.common.evaluate` and pass the prediction path and split.
 
+## Evaluate the held-out test split
+
+After saving the validation mapping, run these commands from the repository root. The Ridge test command verifies the ALS factors and applies the saved weights and vocabulary.
+
+```bash
+uv run --locked python -m scripts.models.baselines --split test
+uv run --locked python -m scripts.models.ridge --split test
+for method in baseline_random baseline_most_active baseline_tag_profile ridge; do
+    uv run --locked python -m scripts.common.evaluate --split test --predictions "data/predictions/${method}_test.parquet"
+done
+```
+
+The commands write four test prediction files in `data/predictions/` and `ridge_test_factors.parquet` in `data/models/`. Ridge also records test diagnostics and output hashes in `ridge_config.json`. To reproduce the notebook tables using the frozen mapping, run only the Test Evaluation cells in notebook 03 and then notebook 04. [Baselines notebook](notebooks/03_baselines.ipynb) · [ALS and Ridge notebook](notebooks/04_als_ridge.ipynb)
+
 ## Open the notebooks
 
 After preprocessing, launch JupyterLab with the `notebook` dependency group.
@@ -196,8 +210,8 @@ uv run --locked --group notebook jupyter lab
 
 - Inspect the prepared data, samples, and figures in the [data preparation notebook](notebooks/01_data_preparation.ipynb).
 - Compare training cutoffs and evaluation windows, then examine the matrices built from the fixed split. [Temporal split notebook](notebooks/02_data_splitting.ipynb)
-- Compare the three shared baselines on validation. [Baselines notebook](notebooks/03_baselines.ipynb)
-- Inspect ALS factors, fit Ridge, and compare the validation metrics. [ALS and Ridge notebook](notebooks/04_als_ridge.ipynb)
+- Compare the three shared baselines on validation and test. [Baselines notebook](notebooks/03_baselines.ipynb)
+- Inspect ALS factors and compare Ridge metrics on validation and test. [ALS and Ridge notebook](notebooks/04_als_ridge.ipynb)
 
 ## Generated outputs
 
