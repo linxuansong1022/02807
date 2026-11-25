@@ -1,6 +1,7 @@
 """Map cold-start track features into the existing ALS space with sparse Ridge."""
 
 import argparse
+from hashlib import sha256
 import json
 from pathlib import Path
 from tempfile import TemporaryDirectory
@@ -117,11 +118,16 @@ def generate_ridge(
     models = root / "data/models"
     predictions = root / "data/predictions"
     splits = root / "data/splits"
-    als_hashes = {name: artifact_sha256(models / name) for name in ALS_FILES}
-    als = json.loads((models / ALS_FILES[0]).read_text(encoding="utf-8"))
-    paired_hashes = als.get("factor_sha256")
-    if paired_hashes is not None and paired_hashes != {name: als_hashes[name] for name in ALS_FILES[1:]}:
+    als_config_bytes = (models / ALS_FILES[0]).read_bytes()
+    als = json.loads(als_config_bytes)
+    if "factor_sha256" not in als:
+        raise ValueError(
+            "als_config.json must contain factor_sha256. Regenerate with uv run --locked python -m scripts.models.als."
+        )
+    factor_hashes = {name: artifact_sha256(models / name) for name in ALS_FILES[1:]}
+    if als["factor_sha256"] != factor_hashes:
         raise ValueError("The ALS factor files do not match the ALS run configuration.")
+    als_hashes = {ALS_FILES[0]: sha256(als_config_bytes).hexdigest(), **factor_hashes}
     split_config = json.loads((splits / "split_config.json").read_text(encoding="utf-8"))
     counts = split_config["counts"]
     training_split = {
@@ -194,7 +200,6 @@ def generate_ridge(
             "weight_frobenius": float(np.linalg.norm(weights)),
             "lsqr_diagnostics": solver,
             "als_sha256": als_hashes,
-            "als_has_factor_hashes": paired_hashes is not None,
             "track_metadata_sha256": feature_hash,
             "ridge_sha256": {},
             "evaluation": {},

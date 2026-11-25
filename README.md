@@ -149,13 +149,13 @@ The command writes three Git-ignored files under `data/models/`. Both Parquet fi
 | --- | --- |
 | `als_user_factors.parquet` | `user_id` as string, `factors` as a fixed-size float32 list |
 | `als_track_factors.parquet` | `track_id` as string, `factors` as a fixed-size float32 list |
-| `als_config.json` | Training parameters, fit time, verified training split, and factor hashes for newly generated exports |
+| `als_config.json` | Training parameters, fit time, verified training split, and required SHA-256 hashes for both factor files |
 
 Each list contains 64 values with the defaults. The notebook reuses a complete local ALS export or trains it when the artifacts are missing. It displays measured fit time, storage, and norm distributions. [ALS and Ridge notebook](notebooks/04_als_ridge.ipynb)
 
 ## Run ALS + Ridge
 
-Use the existing ALS export and the verified split. Ridge fits the nonempty training rows with TF-IDF, regularization 1.0, and damped LSQR. It predicts a latent vector for each validation track and ranks the full eligible-user pool by raw dot product. Run these commands from the repository root.
+Use the ALS export and the verified split. Ridge verifies both ALS factor files against `factor_sha256` in `als_config.json`. Run the ALS command above to regenerate artifacts if either hash is missing or mismatched. Ridge fits the nonempty training rows with TF-IDF, regularization 1.0, and damped LSQR, then ranks the full eligible-user pool by raw dot product. Run these commands from the repository root.
 
 ```bash
 uv run --locked python -m scripts.models.ridge --split validation
@@ -172,7 +172,7 @@ Use `--help` for solver, feature weighting, and batch-size options. The notebook
 | `data/models/ridge_validation_factors.parquet` | String `track_id` and a fixed-size float32 `factors` list |
 | `data/predictions/ridge_validation.parquet` | String `track_id`, string `user_id`, integer `rank`, and float32 dot-product `score` |
 
-To reconstruct B-path scores for candidate pairs, join `user_id` to `als_user_factors.parquet` and `track_id` to `ridge_validation_factors.parquet`, then take the dot product of the two stored vectors. This works for any eligible user. Compare the files' SHA-256 digests with `als_sha256` and `ridge_sha256` in `ridge_config.json` before combining them. For older ALS exports, Ridge checks split, ordered IDs, and dimensions and records the exact input files it used.
+To reconstruct B-path scores for candidate pairs, join `user_id` to `als_user_factors.parquet` and `track_id` to `ridge_validation_factors.parquet`, then take the dot product of the two stored vectors. This works for any eligible user. Compare the files' SHA-256 digests with `als_sha256` and `ridge_sha256` in `ridge_config.json` before combining them.
 
 ## Evaluate recommendations
 
