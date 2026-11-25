@@ -17,7 +17,7 @@ This repository prepares Music4All-Onion listening events and track metadata for
 │   ├── 01_data_preparation.ipynb    # Prepared data inspection and figures
 │   ├── 02_data_splitting.ipynb      # Temporal split and sparse feature diagnostics
 │   ├── 03_baselines.ipynb           # Baseline costs, coverage, and validation results
-│   └── 04_als_ridge.ipynb           # ALS experiment and factor diagnostics
+│   └── 04_als_ridge.ipynb           # ALS factors, Ridge diagnostics, and validation results
 ├── scripts/
 │   ├── data/
 │   │   ├── download_data.py         # Download and verify source files
@@ -31,7 +31,8 @@ This repository prepares Music4All-Onion listening events and track metadata for
 │   │   └── scoring.py               # Rank users deterministically and export predictions
 │   └── models/
 │       ├── als.py                   # Fit CPU implicit ALS and export ID-keyed factors
-│       └── baselines.py             # Generate shared baseline recommendations
+│       ├── baselines.py             # Generate shared baseline recommendations
+│       └── ridge.py                 # Fit the collaborative mapping and rank cold-start tracks
 ├── tests/
 │   └── test_prepare_data.py         # Verify preprocessing on synthetic data
 ├── validation/
@@ -148,9 +149,30 @@ The command writes three Git-ignored files under `data/models/`. Both Parquet fi
 | --- | --- |
 | `als_user_factors.parquet` | `user_id` as string, `factors` as a fixed-size float32 list |
 | `als_track_factors.parquet` | `track_id` as string, `factors` as a fixed-size float32 list |
-| `als_config.json` | Training parameters, confidence, seed, library version, fit time, and verified training split |
+| `als_config.json` | Training parameters, fit time, verified training split, and factor hashes for newly generated exports |
 
-Each list contains 64 values with the defaults. Running the ALS notebook also trains and exports the factors and displays the measured run time, storage, and norm distributions. [ALS notebook](notebooks/04_als_ridge.ipynb)
+Each list contains 64 values with the defaults. The notebook reuses a complete local ALS export or trains it when the artifacts are missing. It displays measured fit time, storage, and norm distributions. [ALS and Ridge notebook](notebooks/04_als_ridge.ipynb)
+
+## Run ALS + Ridge
+
+Use the existing ALS export and the verified split. Ridge fits the nonempty training rows with TF-IDF, regularization 1.0, and damped LSQR. It predicts a latent vector for each validation track and ranks the full eligible-user pool by raw dot product. Run these commands from the repository root.
+
+```bash
+uv run --locked python -m scripts.models.ridge --split validation
+uv run --locked python -m scripts.common.evaluate --split validation --predictions data/predictions/ridge_validation.parquet
+```
+
+Use `--help` for solver, feature weighting, and batch-size options. The notebook compares Ridge to the three existing validation baseline files. Generate any missing baseline files with the baseline command above. For the final evaluation phase, `--split test` applies the saved mapping and writes the equivalent test artifacts.
+
+| Git-ignored artifact | Schema or contents |
+| --- | --- |
+| `data/models/ridge_weights.npy` | Float32 matrix with feature columns as rows and ALS dimensions as columns |
+| `data/models/ridge_vocabulary.json` | Ordered list of feature names matching the weight rows |
+| `data/models/ridge_config.json` | Split, settings, per-dimension LSQR diagnostics, run timings, and input/output hashes |
+| `data/models/ridge_validation_factors.parquet` | String `track_id` and a fixed-size float32 `factors` list |
+| `data/predictions/ridge_validation.parquet` | String `track_id`, string `user_id`, integer `rank`, and float32 dot-product `score` |
+
+To reconstruct B-path scores for candidate pairs, join `user_id` to `als_user_factors.parquet` and `track_id` to `ridge_validation_factors.parquet`, then take the dot product of the two stored vectors. This works for any eligible user. Compare the files' SHA-256 digests with `als_sha256` and `ridge_sha256` in `ridge_config.json` before combining them. For older ALS exports, Ridge checks split, ordered IDs, and dimensions and records the exact input files it used.
 
 ## Evaluate recommendations
 
@@ -175,7 +197,7 @@ uv run --locked --group notebook jupyter lab
 - Inspect the prepared data, samples, and figures in the [data preparation notebook](notebooks/01_data_preparation.ipynb).
 - Compare training cutoffs and evaluation windows, then examine the matrices built from the fixed split. [Temporal split notebook](notebooks/02_data_splitting.ipynb)
 - Compare the three shared baselines on validation. [Baselines notebook](notebooks/03_baselines.ipynb)
-- Train ALS on the fixed split and inspect its factor dimensions and norms. [ALS notebook](notebooks/04_als_ridge.ipynb)
+- Inspect ALS factors, fit Ridge, and compare the validation metrics. [ALS and Ridge notebook](notebooks/04_als_ridge.ipynb)
 
 ## Generated outputs
 

@@ -1,6 +1,7 @@
 """Train CPU implicit ALS and export user and track factors keyed by original IDs."""
 
 import argparse
+from hashlib import file_digest
 import json
 from pathlib import Path
 from tempfile import TemporaryDirectory
@@ -24,7 +25,13 @@ DEFAULTS = {
 }
 
 
-def _write_factors(
+def artifact_sha256(path: Path) -> str:
+    """Return the SHA-256 digest of an artifact."""
+    with path.open("rb") as file:
+        return file_digest(file, "sha256").hexdigest()
+
+
+def write_factors(
     path: Path, id_column: str, ids: list[str], vectors: np.ndarray, factors: int,
 ) -> None:
     """Write a fixed-size float32 vector per ID and verify the Parquet round trip."""
@@ -110,11 +117,13 @@ def train_als(
     output.mkdir(parents=True, exist_ok=True)
     with TemporaryDirectory(dir=output) as directory:
         staged = Path(directory)
-        _write_factors(staged / "als_user_factors.parquet", "user_id", user_ids, model.user_factors, factors)
-        _write_factors(staged / "als_track_factors.parquet", "track_id", track_ids, model.item_factors, factors)
+        factor_files = ("als_user_factors.parquet", "als_track_factors.parquet")
+        write_factors(staged / factor_files[0], "user_id", user_ids, model.user_factors, factors)
+        write_factors(staged / factor_files[1], "track_id", track_ids, model.item_factors, factors)
+        config["factor_sha256"] = {name: artifact_sha256(staged / name) for name in factor_files}
         config_path = staged / "als_config.json"
         config_path.write_text(json.dumps(config, indent=2) + "\n", encoding="utf-8")
-        for name in ("als_user_factors.parquet", "als_track_factors.parquet", "als_config.json"):
+        for name in (*factor_files, "als_config.json"):
             (staged / name).replace(output / name)
     return config
 
