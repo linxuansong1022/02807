@@ -1,15 +1,12 @@
 """Tiny end-to-end fixture: preserve plays, global first_seen, content joins and ID samples."""
 import bz2
-import importlib.util
 from pathlib import Path
 import tempfile
 import unittest
 
 import pyarrow.parquet as pq
 
-spec = importlib.util.spec_from_file_location("prepare", Path(__file__).parents[1] / "scripts/prepare_data.py")
-prepare = importlib.util.module_from_spec(spec)
-spec.loader.exec_module(prepare)
+from scripts.data import prepare_data as prepare
 
 
 class PreparationTest(unittest.TestCase):

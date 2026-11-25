@@ -8,7 +8,7 @@ metadata, and descriptive statistics to data/processed/. The two user
 samples go in data/samples/. Run summaries and figures go in reports/.
 Model training and formal dataset splits are outside this workflow.
 
-Run with `uv run python scripts/prepare_data.py`. Add
+From the repository root, run `uv run --locked python -m scripts.data.prepare_data`. Add
 `--output-dir data/reproduced` to write processed/, samples/, and reports/
 under a separate directory.
 """
@@ -298,7 +298,7 @@ def figures(out, reports):
 def main():
     """Verify source files, prepare data and figures, and write run reports."""
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--root", type=Path, default=Path(__file__).resolve().parents[1])
+    parser.add_argument("--root", type=Path, default=Path(__file__).resolve().parents[2])
     parser.add_argument("--expected-rows", type=int, default=252984396)
     parser.add_argument("--output-dir", type=Path,
                         help="Write processed/, samples/, reports/ under a separate directory")

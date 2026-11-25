@@ -5,7 +5,7 @@ from pathlib import Path
 
 import duckdb
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
 RANK_CUTOFFS = (100, 500, 1000)
 SPLITS = ("validation", "test")
 INTEGER_TYPES = {

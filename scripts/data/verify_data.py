@@ -9,7 +9,7 @@ from tempfile import TemporaryDirectory
 import duckdb
 import pyarrow.parquet as pq
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
 REFERENCE = Path("validation/data_reference.json")
 SPLIT_TABLES = ("eligible_users", "train_interactions", "track_splits", "ground_truth")
 SPLIT_FILES = tuple(f"data/splits/{name}.parquet" for name in SPLIT_TABLES)

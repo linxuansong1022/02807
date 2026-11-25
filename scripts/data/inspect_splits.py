@@ -3,7 +3,7 @@
 Reads the default processed tables, user samples, and reports/data_summary.json.
 Writes the feasibility CSV, settings, and data handoff under reports/.
 
-Run with uv run python scripts/inspect_splits.py after preprocessing.
+After preprocessing, run uv run --locked python -m scripts.data.inspect_splits from the repository root.
 """
 from pathlib import Path
 import csv
@@ -13,7 +13,7 @@ import time
 
 import duckdb
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
 ELIGIBLE_USERS_SQL = """
     SELECT user_id FROM events JOIN tracks USING (track_id)
     WHERE timestamp < ? AND has_tags
