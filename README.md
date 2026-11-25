@@ -15,7 +15,8 @@ This repository prepares Music4All-Onion listening events and track metadata for
 │   └── project.pdf                  # Course project specification
 ├── notebooks/
 │   ├── 01_data_preparation.ipynb    # Prepared data inspection and figures
-│   └── 02_data_splitting.ipynb      # Candidate cutoffs and split design
+│   ├── 02_data_splitting.ipynb      # Temporal split and sparse feature diagnostics
+│   └── 04_als_ridge.ipynb           # ALS experiment and factor diagnostics
 ├── scripts/
 │   ├── data/
 │   │   ├── download_data.py         # Download and verify source files
@@ -26,7 +27,8 @@ This repository prepares Music4All-Onion listening events and track metadata for
 │   ├── common/
 │   │   ├── evaluate.py              # Score ranked user recommendations
 │   │   └── features.py              # Build aligned sparse interactions and tag features
-│   └── models/                      # Model implementations
+│   └── models/
+│       └── als.py                   # Fit CPU implicit ALS and export ID-keyed factors
 ├── tests/
 │   └── test_prepare_data.py         # Verify preprocessing on synthetic data
 ├── validation/
@@ -35,7 +37,8 @@ This repository prepares Music4All-Onion listening events and track metadata for
 │   ├── raw/
 │   ├── processed/
 │   ├── samples/
-│   └── splits/
+│   ├── splits/
+│   └── models/                      # Local model artifacts
 └── reports/                         # Local summaries and figures
 ```
 
@@ -112,6 +115,26 @@ X, track_ids, vocabulary = load_track_features("tfidf", training_ids=train_ids)
 
 See the Shared Sparse Features section for weighting definitions, matrix sizes, construction times, and tag coverage. [Temporal split notebook](notebooks/02_data_splitting.ipynb)
 
+## Train implicit ALS
+
+Build and verify the fixed split, then run CPU training from the repository root. The defaults are 64 factors, regularization 0.1, confidence scale 10, 15 iterations, and seed 42. Use `--help` for parameter overrides.
+
+```bash
+uv run --locked python -m scripts.models.als
+```
+
+Training uses raw pre-cutoff play counts for every eligible user and training track. It stores confidence `1 + 10 × play_count` for observed pairs, with unit confidence for missing pairs. The library receives these weights with its own `alpha` set to 1.
+
+The command writes three Git-ignored files under `data/models/`. Both Parquet files preserve the original string IDs in the order returned by the interaction loader. Join candidates to the user factors on `user_id`.
+
+| File | Schema or contents |
+| --- | --- |
+| `als_user_factors.parquet` | `user_id` as string, `factors` as a fixed-size float32 list |
+| `als_track_factors.parquet` | `track_id` as string, `factors` as a fixed-size float32 list |
+| `als_config.json` | Training parameters, confidence, seed, library version, fit time, and verified training split |
+
+Each list contains 64 values with the defaults. Running the ALS notebook also trains and exports the factors and displays the measured run time, storage, and norm distributions. [ALS notebook](notebooks/04_als_ridge.ipynb)
+
 ## Evaluate recommendations
 
 Provide a Parquet file for the selected split with the original string `track_id` and `user_id` columns and an integer `rank` column. Each track in that split needs 1,000 distinct eligible users at ranks 1–1,000, where rank 1 is best. Additional ranks must also have unique users and ranks per track. Optional scores are ignored.
@@ -134,6 +157,7 @@ uv run --locked --group notebook jupyter lab
 
 - Inspect the prepared data, samples, and figures in the [data preparation notebook](notebooks/01_data_preparation.ipynb).
 - Compare training cutoffs and evaluation windows, then examine the matrices built from the fixed split. [Temporal split notebook](notebooks/02_data_splitting.ipynb)
+- Train ALS on the fixed split and inspect its factor dimensions and norms. [ALS notebook](notebooks/04_als_ridge.ipynb)
 
 ## Generated outputs
 
