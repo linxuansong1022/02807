@@ -24,7 +24,8 @@ This repository prepares Music4All-Onion listening events and track metadata for
 │   │   ├── build_splits.py          # Generate the fixed temporal split
 │   │   └── verify_data.py           # Check datasets against the reference
 │   ├── common/
-│   │   └── evaluate.py              # Score ranked user recommendations
+│   │   ├── evaluate.py              # Score ranked user recommendations
+│   │   └── features.py              # Build aligned sparse interactions and tag features
 │   └── models/                      # Model implementations
 ├── tests/
 │   └── test_prepare_data.py         # Verify preprocessing on synthetic data
@@ -95,6 +96,26 @@ Read the following local files from `data/splits/` after the command succeeds. J
 | `track_splits.parquet` | Train, validation, and test track IDs with global `first_seen`, including evaluation tracks without eligible listeners |
 | `ground_truth.parquet` | Distinct eligible listeners during each evaluation track's first 30 days. Use these rows as evaluation labels. |
 | `split_config.json` | Arrival windows, eligibility rules, and output counts |
+
+## Build sparse model inputs
+
+After verifying the data, run the shared loader from the repository root to print matrix sizes and feature coverage. The available tag weightings are `binary`, `weighted`, and `tfidf`.
+
+```bash
+uv run --locked python -m scripts.common.features --weighting tfidf
+```
+
+```python
+from scripts.common.features import load_interactions, load_track_features
+
+R, user_ids, train_ids = load_interactions()
+X, track_ids, vocabulary = load_track_features("tfidf")
+assert train_ids == track_ids["train"]
+```
+
+`R` contains raw aggregated play counts in float32 CSR format. Its rows are sorted eligible user IDs and its columns are sorted training track IDs. Each `X[split]` is a float32 CSR matrix with sorted track rows and the same sorted training tag columns. Untagged tracks and tracks with only unseen tags keep zero rows. Use these IDs to align the ALS track factors with the rows selected for Ridge.
+
+Binary values are 1 for each positive tag. Weighted values are the original positive metadata weights. TF-IDF multiplies each positive weight by `log((1 + N) / (1 + df)) + 1` using the natural logarithm, where `N` counts tagged training tracks and `df` counts training tracks with that tag. Each nonempty TF-IDF row is L2-normalized after dropping tags outside the training vocabulary.
 
 ## Evaluate recommendations
 
