@@ -1,7 +1,6 @@
 """Map cold-start track features into the existing ALS space with sparse Ridge."""
 
 import argparse
-from hashlib import sha256
 import json
 from pathlib import Path
 from tempfile import TemporaryDirectory
@@ -18,10 +17,9 @@ from scipy.sparse.linalg import lsqr
 from scripts.common.evaluate import RANK_CUTOFFS, SPLITS
 from scripts.common.features import ROOT, WEIGHTINGS, load_track_features
 from scripts.common.scoring import export_predictions, top_k
-from scripts.models.als import artifact_sha256, write_factors
+from scripts.models.als import ALS_FILES, artifact_sha256, verify_als_export, write_factors
 
 DEFAULTS = {"weighting": "tfidf", "regularization": 1.0, "atol": 1e-6, "btol": 1e-6, "iter_lim": 200}
-ALS_FILES = ("als_config.json", "als_user_factors.parquet", "als_track_factors.parquet")
 WEIGHTS = "ridge_weights.npy"
 VOCABULARY = "ridge_vocabulary.json"
 CONFIG = "ridge_config.json"
@@ -118,16 +116,7 @@ def generate_ridge(
     models = root / "data/models"
     predictions = root / "data/predictions"
     splits = root / "data/splits"
-    als_config_bytes = (models / ALS_FILES[0]).read_bytes()
-    als = json.loads(als_config_bytes)
-    if "factor_sha256" not in als:
-        raise ValueError(
-            "als_config.json must contain factor_sha256. Regenerate with uv run --locked python -m scripts.models.als."
-        )
-    factor_hashes = {name: artifact_sha256(models / name) for name in ALS_FILES[1:]}
-    if als["factor_sha256"] != factor_hashes:
-        raise ValueError("The ALS factor files do not match the ALS run configuration.")
-    als_hashes = {ALS_FILES[0]: sha256(als_config_bytes).hexdigest(), **factor_hashes}
+    als, als_hashes = verify_als_export(models)
     split_config = json.loads((splits / "split_config.json").read_text(encoding="utf-8"))
     counts = split_config["counts"]
     training_split = {

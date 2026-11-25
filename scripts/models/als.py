@@ -1,7 +1,7 @@
 """Train CPU implicit ALS and export user and track factors keyed by original IDs."""
 
 import argparse
-from hashlib import file_digest
+from hashlib import file_digest, sha256
 import json
 from pathlib import Path
 from tempfile import TemporaryDirectory
@@ -14,6 +14,8 @@ import pyarrow.parquet as pq
 from implicit.cpu.als import AlternatingLeastSquares
 
 from scripts.common.features import ROOT, load_interactions
+
+ALS_FILES = ("als_config.json", "als_user_factors.parquet", "als_track_factors.parquet")
 
 DEFAULTS = {
     "factors": 64,
@@ -29,6 +31,23 @@ def artifact_sha256(path: Path) -> str:
     """Return the SHA-256 digest of an artifact."""
     with path.open("rb") as file:
         return file_digest(file, "sha256").hexdigest()
+
+
+def verify_als_export(model_dir: Path) -> tuple[dict, dict[str, str]]:
+    """Load the ALS configuration and verify the two factor files against it."""
+    missing = [name for name in ALS_FILES if not (model_dir / name).is_file()]
+    if missing:
+        raise FileNotFoundError(f"Incomplete ALS export. Missing files in {model_dir}: {', '.join(missing)}")
+    config_bytes = (model_dir / ALS_FILES[0]).read_bytes()
+    config = json.loads(config_bytes)
+    if not isinstance(config, dict) or "factor_sha256" not in config:
+        raise ValueError(
+            "als_config.json must contain factor_sha256. Regenerate with uv run --locked python -m scripts.models.als."
+        )
+    factor_hashes = {name: artifact_sha256(model_dir / name) for name in ALS_FILES[1:]}
+    if config["factor_sha256"] != factor_hashes:
+        raise ValueError("The ALS factor files do not match the ALS run configuration.")
+    return config, {ALS_FILES[0]: sha256(config_bytes).hexdigest(), **factor_hashes}
 
 
 def write_factors(
@@ -117,13 +136,13 @@ def train_als(
     output.mkdir(parents=True, exist_ok=True)
     with TemporaryDirectory(dir=output) as directory:
         staged = Path(directory)
-        factor_files = ("als_user_factors.parquet", "als_track_factors.parquet")
+        factor_files = ALS_FILES[1:]
         write_factors(staged / factor_files[0], "user_id", user_ids, model.user_factors, factors)
         write_factors(staged / factor_files[1], "track_id", track_ids, model.item_factors, factors)
         config["factor_sha256"] = {name: artifact_sha256(staged / name) for name in factor_files}
-        config_path = staged / "als_config.json"
+        config_path = staged / ALS_FILES[0]
         config_path.write_text(json.dumps(config, indent=2) + "\n", encoding="utf-8")
-        for name in (*factor_files, "als_config.json"):
+        for name in (*factor_files, ALS_FILES[0]):
             (staged / name).replace(output / name)
     return config
 

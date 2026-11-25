@@ -1,6 +1,6 @@
 # Music cold-start recommendation
 
-This repository prepares Music4All-Onion listening events and track metadata for a study of recommending tracks with no training interactions. It includes data download, preprocessing, and optional checks of candidate time windows.
+This project ranks potential listeners for cold-start tracks using Music4All-Onion listening histories and track tags. The pipeline prepares and verifies the data, builds a fixed temporal split, and uses a shared evaluator to compare random, most-active, and tag-profile baselines with ALS + Ridge.
 
 ## Folder structure
 
@@ -151,7 +151,7 @@ The command writes three Git-ignored files under `data/models/`. Both Parquet fi
 | `als_track_factors.parquet` | `track_id` as string, `factors` as a fixed-size float32 list |
 | `als_config.json` | Training parameters, fit time, verified training split, and required SHA-256 hashes for both factor files |
 
-Each list contains 64 values with the defaults. The notebook reuses a complete local ALS export or trains it when the artifacts are missing. It displays measured fit time, storage, and norm distributions. [ALS and Ridge notebook](notebooks/04_als_ridge.ipynb)
+Each list contains 64 values with the defaults. The notebook trains ALS only when all three artifacts are absent. An existing export must be complete and pass both SHA-256 checks before the notebook displays its fit time, storage, and factor norms. [ALS and Ridge notebook](notebooks/04_als_ridge.ipynb)
 
 ## Run ALS + Ridge
 
