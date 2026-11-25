@@ -7,9 +7,9 @@ from tempfile import TemporaryDirectory
 
 import duckdb
 
-from inspect_splits import ELIGIBLE_USERS_SQL
+from scripts.data.inspect_splits import ELIGIBLE_USERS_SQL
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
 TRAIN_CUTOFF = date(2018, 1, 1)
 VALIDATION_END = date(2018, 6, 30)
 TEST_START = date(2018, 7, 30)

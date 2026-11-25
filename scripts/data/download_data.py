@@ -1,14 +1,14 @@
 """Download and verify the five Music4All-Onion v2 source files.
 
 The files and download_manifest.json are stored in data/raw/.
-Run with uv run python scripts/download_data.py.
+From the repository root, run uv run --locked python -m scripts.data.download_data
 """
 import hashlib
 import json
 from pathlib import Path
 import subprocess
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
 RAW = ROOT / "data/raw"
 BASE = "https://zenodo.org/records/15394646"
 FILES = {
