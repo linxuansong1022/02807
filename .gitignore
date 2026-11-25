@@ -4,6 +4,7 @@
 /data/samples/
 /data/splits/
 /data/models/
+/data/predictions/
 /.venv/
 __pycache__/
 .ipynb_checkpoints/

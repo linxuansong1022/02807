@@ -16,6 +16,7 @@ This repository prepares Music4All-Onion listening events and track metadata for
 ├── notebooks/
 │   ├── 01_data_preparation.ipynb    # Prepared data inspection and figures
 │   ├── 02_data_splitting.ipynb      # Temporal split and sparse feature diagnostics
+│   ├── 03_baselines.ipynb           # Baseline costs, coverage, and validation results
 │   └── 04_als_ridge.ipynb           # ALS experiment and factor diagnostics
 ├── scripts/
 │   ├── data/
@@ -26,9 +27,11 @@ This repository prepares Music4All-Onion listening events and track metadata for
 │   │   └── verify_data.py           # Check datasets against the reference
 │   ├── common/
 │   │   ├── evaluate.py              # Score ranked user recommendations
-│   │   └── features.py              # Build aligned sparse interactions and tag features
+│   │   ├── features.py              # Build aligned sparse interactions and tag features
+│   │   └── scoring.py               # Rank users deterministically and export predictions
 │   └── models/
-│       └── als.py                   # Fit CPU implicit ALS and export ID-keyed factors
+│       ├── als.py                   # Fit CPU implicit ALS and export ID-keyed factors
+│       └── baselines.py             # Generate shared baseline recommendations
 ├── tests/
 │   └── test_prepare_data.py         # Verify preprocessing on synthetic data
 ├── validation/
@@ -38,7 +41,8 @@ This repository prepares Music4All-Onion listening events and track metadata for
 │   ├── processed/
 │   ├── samples/
 │   ├── splits/
-│   └── models/                      # Local model artifacts
+│   ├── models/                      # Local model artifacts
+│   └── predictions/                 # Local ranked recommendations
 └── reports/                         # Local summaries and figures
 ```
 
@@ -115,6 +119,19 @@ X, track_ids, vocabulary = load_track_features("tfidf", training_ids=train_ids)
 
 See the Shared Sparse Features section for weighting definitions, matrix sizes, construction times, and tag coverage. [Temporal split notebook](notebooks/02_data_splitting.ipynb)
 
+## Run the shared baselines
+
+Build and verify the fixed split, then generate predictions from the repository root.
+
+```bash
+uv run --locked python -m scripts.models.baselines --split validation
+uv run --locked python -m scripts.common.evaluate --split validation --predictions data/predictions/baseline_tag_profile_validation.parquet
+```
+
+The same evaluation command accepts the random and most-active prediction files. The generator writes `baseline_{random,most_active,tag_profile}_{split}.parquet` under the Git-ignored `data/predictions/` directory. Each track has 1,000 distinct eligible users at ranks 1–1,000. Most-active saves pre-cutoff play totals as scores, tag profile saves TF-IDF cosine similarities, and random uses seed 42 with a separate stream for each split. Activity and similarity ties use ascending user ID.
+
+Use `--split test` to generate test predictions for the final evaluation phase. Use `--batch-size` to adjust the number of user profiles and scores held at once. The notebook runs the three baselines on validation and compares the metrics, coverage, and computational cost. [Baselines notebook](notebooks/03_baselines.ipynb)
+
 ## Train implicit ALS
 
 Build and verify the fixed split, then run CPU training from the repository root. The defaults are 64 factors, regularization 0.1, confidence scale 10, 15 iterations, and seed 42. Use `--help` for parameter overrides.
@@ -157,6 +174,7 @@ uv run --locked --group notebook jupyter lab
 
 - Inspect the prepared data, samples, and figures in the [data preparation notebook](notebooks/01_data_preparation.ipynb).
 - Compare training cutoffs and evaluation windows, then examine the matrices built from the fixed split. [Temporal split notebook](notebooks/02_data_splitting.ipynb)
+- Compare the three shared baselines on validation. [Baselines notebook](notebooks/03_baselines.ipynb)
 - Train ALS on the fixed split and inspect its factor dimensions and norms. [ALS notebook](notebooks/04_als_ridge.ipynb)
 
 ## Generated outputs
