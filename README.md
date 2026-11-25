@@ -99,23 +99,18 @@ Read the following local files from `data/splits/` after the command succeeds. J
 
 ## Build sparse model inputs
 
-After verifying the data, run the shared loader from the repository root to print matrix sizes and feature coverage. The available tag weightings are `binary`, `weighted`, and `tfidf`.
-
-```bash
-uv run --locked python -m scripts.common.features --weighting tfidf
-```
+After verifying the data, import the shared loaders from the repository root. The available tag weightings are `binary`, `weighted`, and `tfidf`.
 
 ```python
 from scripts.common.features import load_interactions, load_track_features
 
 R, user_ids, train_ids = load_interactions()
-X, track_ids, vocabulary = load_track_features("tfidf")
-assert train_ids == track_ids["train"]
+X, track_ids, vocabulary = load_track_features("tfidf", training_ids=train_ids)
 ```
 
 `R` contains raw aggregated play counts in float32 CSR format. Its rows are sorted eligible user IDs and its columns are sorted training track IDs. Each `X[split]` is a float32 CSR matrix with sorted track rows and the same sorted training tag columns. Untagged tracks and tracks with only unseen tags keep zero rows. Use these IDs to align the ALS track factors with the rows selected for Ridge.
 
-Binary values are 1 for each positive tag. Weighted values are the original positive metadata weights. TF-IDF multiplies each positive weight by `log((1 + N) / (1 + df)) + 1` using the natural logarithm, where `N` counts tagged training tracks and `df` counts training tracks with that tag. Each nonempty TF-IDF row is L2-normalized after dropping tags outside the training vocabulary.
+See the Shared Sparse Features section for weighting definitions, matrix sizes, construction times, and tag coverage. [Temporal split notebook](notebooks/02_data_splitting.ipynb)
 
 ## Evaluate recommendations
 
@@ -138,7 +133,7 @@ uv run --locked --group notebook jupyter lab
 ```
 
 - Inspect the prepared data, samples, and figures in the [data preparation notebook](notebooks/01_data_preparation.ipynb).
-- Compare training cutoffs and evaluation windows in the [temporal split notebook](notebooks/02_data_splitting.ipynb).
+- Compare training cutoffs and evaluation windows, then examine the matrices built from the fixed split. [Temporal split notebook](notebooks/02_data_splitting.ipynb)
 
 ## Generated outputs
 

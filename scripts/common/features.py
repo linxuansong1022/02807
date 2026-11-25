@@ -1,9 +1,8 @@
 """Build aligned sparse interactions and track features from the verified split."""
 
-import argparse
+from collections.abc import Sequence
 import json
 from pathlib import Path
-from time import perf_counter
 
 import duckdb
 import numpy as np
@@ -121,7 +120,7 @@ def load_interactions(root: Path = ROOT) -> tuple[csr_matrix, list[str], list[st
 
 
 def load_track_features(
-    weighting: str = "binary", root: Path = ROOT,
+    weighting: str = "binary", root: Path = ROOT, *, training_ids: Sequence[str] | None = None,
 ) -> tuple[dict[str, csr_matrix], dict[str, list[str]], list[str]]:
     """Return CSR matrices and ordered track IDs by split, plus the ordered tag vocabulary.
 
@@ -130,11 +129,14 @@ def load_track_features(
     log((1 + N) / (1 + df)) + 1 as IDF, where N counts tagged training tracks
     and df counts training tracks with the tag. Normalize each nonempty TF-IDF
     row to unit L2 norm after dropping tags outside the training vocabulary.
+    Pass the training IDs returned by load_interactions to check alignment.
     """
     if weighting not in WEIGHTINGS:
         raise ValueError(f"Choose a tag weighting from {', '.join(WEIGHTINGS)}.")
     with duckdb.connect(config={"threads": 4}) as db:
         tracks = _track_index(db, root)
+        if training_ids is not None and list(training_ids) != tracks["train"]:
+            raise ValueError("Interaction and content training track IDs differ or are out of order.")
         db.execute("""
             CREATE TEMP TABLE split_metadata AS
             SELECT s.split, s.idx, t.tags, t.tag_weights
@@ -199,42 +201,3 @@ def load_track_features(
                 raise ValueError(f"{split} has duplicate track-tag coordinates.")
             matrices[split] = matrix
     return matrices, tracks, vocabulary
-
-
-def _report(name: str, matrix: csr_matrix, zero_rows: bool = False) -> None:
-    cells = matrix.shape[0] * matrix.shape[1]
-    density = matrix.nnz / cells if cells else 0
-    storage = matrix.data.nbytes + matrix.indices.nbytes + matrix.indptr.nbytes
-    print(
-        f"{name}: {matrix.shape[0]:,} × {matrix.shape[1]:,}, {matrix.nnz:,} nonzeros, "
-        f"{density:.4%} density, {storage / 2**20:,.2f} MiB CSR, "
-        f"{cells * matrix.dtype.itemsize / 2**30:,.4f} GiB dense"
-    )
-    if zero_rows:
-        print(f"  Zero-feature rows: {np.count_nonzero(np.diff(matrix.indptr) == 0):,}")
-
-
-def main() -> None:
-    parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--weighting", choices=WEIGHTINGS, default="binary")
-    args = parser.parse_args()
-
-    start = perf_counter()
-    interactions, _, training_ids = load_interactions()
-    _report("Interactions", interactions)
-    print(f"  Construction: {perf_counter() - start:.2f} s")
-
-    start = perf_counter()
-    content, tracks, vocabulary = load_track_features(args.weighting)
-    if training_ids != tracks["train"] or any(
-        content[split].shape != (len(tracks[split]), len(vocabulary)) for split in SPLITS
-    ):
-        raise ValueError("Interaction and content track IDs or content dimensions are misaligned.")
-    elapsed = perf_counter() - start
-    for split, matrix in content.items():
-        _report(f"{split} tags ({args.weighting})", matrix, zero_rows=True)
-    print(f"  Tag matrix construction: {elapsed:.2f} s")
-
-
-if __name__ == "__main__":
-    main()
