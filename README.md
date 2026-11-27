@@ -17,7 +17,8 @@ This project ranks potential listeners for cold-start tracks using Music4All-Oni
 │   ├── 01_data_preparation.ipynb    # Prepared data inspection and figures
 │   ├── 02_data_splitting.ipynb      # Temporal split and sparse feature diagnostics
 │   ├── 03_baselines.ipynb           # Baseline diagnostics, validation, and test results
-│   └── 04_als_ridge.ipynb           # ALS factors, Ridge diagnostics, validation, and test results
+│   ├── 04_als_ridge.ipynb           # ALS factors, Ridge diagnostics, validation, and test results
+│   └── 05_fusion.ipynb              # Listener clustering, fusion weights, and ablation results
 ├── scripts/
 │   ├── data/
 │   │   ├── download_data.py         # Download and verify source files
@@ -29,12 +30,19 @@ This project ranks potential listeners for cold-start tracks using Music4All-Oni
 │   │   ├── evaluate.py              # Score ranked user recommendations
 │   │   ├── features.py              # Build aligned sparse interactions and tag features
 │   │   └── scoring.py               # Rank users deterministically and export predictions
-│   └── models/
-│       ├── als.py                   # Fit CPU implicit ALS and export ID-keyed factors
-│       ├── baselines.py             # Generate shared baseline recommendations
-│       └── ridge.py                 # Fit the collaborative mapping and rank cold-start tracks
+│   ├── models/
+│   │   ├── als.py                   # Fit CPU implicit ALS and export ID-keyed factors
+│   │   ├── baselines.py             # Generate shared baseline recommendations
+│   │   ├── clustering.py            # Weighted k-means and cluster scores for candidate listeners
+│   │   ├── fusion.py                # Combine pool, cluster, and Ridge scores and run the ablations
+│   │   └── ridge.py                 # Fit the collaborative mapping and rank cold-start tracks
+│   ├── retrieval.py                 # Exact Jaccard and MinHash LSH (C)
+│   ├── retrieval_data.py            # Tag sets and split tables for retrieval (C)
+│   ├── evaluate_retrieval.py        # Candidate-pool scores and tag-rule tuning (C)
+│   └── benchmark_retrieval.py       # LSH timing and neighbour recall (C)
 ├── tests/
-│   └── test_prepare_data.py         # Verify preprocessing on synthetic data
+│   ├── test_prepare_data.py         # Verify preprocessing on synthetic data
+│   └── test_fusion.py               # Check k-means, fusion, ties, and metrics on synthetic data
 ├── validation/
 │   └── data_reference.json          # Expected schemas, counts, and fingerprints
 ├── data/                            # Local datasets
@@ -174,6 +182,30 @@ Use `--help` for solver, feature weighting, and batch-size options. The notebook
 
 To reconstruct B-path scores for candidate pairs, join `user_id` to `als_user_factors.parquet` and `track_id` to `ridge_validation_factors.parquet`, then take the dot product of the two stored vectors. This works for any eligible user. Compare the files' SHA-256 digests with `als_sha256` and `ridge_sha256` in `ridge_config.json` before combining them.
 
+## Run listener clustering and fusion
+
+Run ALS and Ridge for both splits first. The fusion script also imports C's candidate pool (`scripts/retrieval.py`, `scripts/retrieval_data.py`, `scripts/evaluate_retrieval.py`, and `scripts/benchmark_retrieval.py`), ported to this layout. Run these commands from the repository root.
+
+```bash
+uv run --locked python -m scripts.models.fusion --stage tune-a
+uv run --locked python -m scripts.models.fusion --stage tune-full
+uv run --locked python -m scripts.models.fusion --stage final --split validation
+uv run --locked python -m scripts.models.fusion --stage final --split test
+```
+
+For each cold-start track the script combines C's candidate-pool score, a listener-cluster score, and B's Ridge score. The cluster score comes from weighted k-means on the L2-normalized ALS vectors of the top N pool users, with pool scores as weights. The k-means is implemented in `scripts/models/clustering.py`. The final score is γ·(β·pool + (1 − β)·cluster) + (1 − γ)·ridge after per-track min–max or z-score normalization. Users are ranked by score. Only exactly equal scores are ordered by training plays, so tracks without any signal fall back to the most active users.
+
+`tune-a` and `tune-full` use only the validation split and select by Recall@100, with NDCG@100 breaking ties. `tune-a` searches N, k, the aggregation (`wsum` or `max`), and β for the A path alone. `tune-full` fixes those settings and searches β, γ, and the normalization. It saves the five ablation variants (full system, without clustering, A path only, B path only, and candidate pool only) to `selected.json`. `final` applies the frozen variants and scores the exported predictions with the shared evaluator. Use `--help` for the grids, `--neighbors lsh` for C's MinHash LSH (128 bands × 1 row by default), and `--limit 30` for a quick smoke test.
+
+| Git-ignored artifact | Contents |
+| --- | --- |
+| `reports/fusion/exact/tune_a_grid.csv`, `tune_a_best.json` | A-path grid and the selected clustering settings |
+| `reports/fusion/exact/tune_full_grid.csv`, `selected.json` | Fusion grid and the frozen ablation variants |
+| `reports/fusion/exact/final_{validation,test}.csv`, `.md` | Official evaluator metrics per variant |
+| `data/predictions/fusion_{variant}_exact_{split}.parquet` | 1,000 ranked users per track for each variant |
+
+The [fusion notebook](notebooks/05_fusion.ipynb) presents the selection grids and both ablation tables.
+
 ## Evaluate recommendations
 
 Provide a Parquet file for the selected split with the original string `track_id` and `user_id` columns and an integer `rank` column. Each track in that split needs 1,000 distinct eligible users at ranks 1–1,000, where rank 1 is best. Additional ranks must also have unique users and ranks per track. Optional scores are ignored.
@@ -212,6 +244,7 @@ uv run --locked --group notebook jupyter lab
 - Compare training cutoffs and evaluation windows, then examine the matrices built from the fixed split. [Temporal split notebook](notebooks/02_data_splitting.ipynb)
 - Compare the three shared baselines on validation and test. [Baselines notebook](notebooks/03_baselines.ipynb)
 - Inspect ALS factors and compare Ridge metrics on validation and test. [ALS and Ridge notebook](notebooks/04_als_ridge.ipynb)
+- Compare clustering settings, fusion weights, and the ablation variants. [Fusion notebook](notebooks/05_fusion.ipynb)
 
 ## Generated outputs
 
